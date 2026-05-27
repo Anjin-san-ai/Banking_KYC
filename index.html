@@ -1,0 +1,3667 @@
+<!DOCTYPE html>
+<!-- saved from url=(0058)file:///C:/Users/2039669/Downloads/kyc_aml_combined_6.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KYC/AML — Related Party Problem &amp; Agentic Architecture</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── RESET & ROOT ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #070b14; color: #dde8f8; }
+body { font-family: 'DM Sans','Inter',sans-serif; font-size: 14px; }
+
+:root {
+  --bg:#070b14; --bg2:#0c1220; --surface:#0f1929; --surface2:#152035; --surface3:#1a2840;
+  --border:#1e3352; --border2:#243d62; --text:#dde8f8; --muted:#6a85a8; --dim:#2e4060;
+  --bank-color:#0ea5e9; --known-color:#22c55e; --unknown-color:#f97316;
+  --sanctions-color:#ef4444; --company-color:#a78bfa; --bank-glow:#0ea5e940;
+  --known-glow:#22c55e35; --unknown-glow:#f9731635; --sanctions-glow:#ef444435; --company-glow:#a78bfa35;
+  --risk-high:#ef4444; --risk-med:#f59e0b; --risk-low:#22c55e; --risk-none:#64748b;
+  --col-trigger:#06b6d4; --col-agent:#818cf8; --col-orch:#c084fc;
+  --col-external:#34d399; --col-human:#fb923c; --col-aml:#f43f5e; --col-data:#facc15;
+  --edge-data:#34d399; --edge-cmd:#818cf8; --edge-alert:#f43f5e; --edge-human:#fb923c; --edge-result:#06b6d4;
+}
+
+/* ── MASTER NAV ───────────────────────────────────────────── */
+#master-nav {
+  position: fixed; top: 0; left: 0; right: 0; height: 54px;
+  background: rgba(7,11,20,0.98); border-bottom: 1px solid #1e3352;
+  display: flex; align-items: center; padding: 0 20px; gap: 6px;
+  z-index: 9999; backdrop-filter: blur(16px); flex-shrink: 0;
+}
+.m-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:14px; color:#c084fc; letter-spacing:.05em; margin-right:6px; flex-shrink:0; }
+.m-sep { width:1px; height:22px; background:#243d62; flex-shrink:0; margin:0 4px; }
+.m-btn {
+  display:flex; align-items:center; gap:8px; padding:7px 15px;
+  border-radius:8px; border:1px solid transparent; cursor:pointer;
+  background:none; color:#6a85a8; font-family:'DM Sans',sans-serif;
+  font-size:12px; font-weight:500; transition:all .15s; white-space:nowrap; flex-shrink:0;
+}
+.m-btn:hover { color:#dde8f8; background:#152035; }
+.m-btn.active { border-color:#243d62; background:#152035; color:#dde8f8; }
+.m-num {
+  font-family:'DM Mono',monospace; font-size:9px; font-weight:700;
+  width:18px; height:18px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid currentColor; flex-shrink:0;
+}
+#m-btn-rpp.active  { color:#f43f5e; border-color:#f43f5e40; background:#f43f5e0d; }
+#m-btn-arch.active { color:#c084fc; border-color:#c084fc40; background:#c084fc0d; }
+.m-hint { margin-left:auto; font-family:'DM Mono',monospace; font-size:9px; color:#2e4060; flex-shrink:0; }
+
+/* ── SECTION WRAPPERS ─────────────────────────────────────── */
+.m-sec {
+  display:none; position:fixed;
+  top:54px; left:0; right:0; bottom:0; overflow:hidden;
+}
+.m-sec.active { display:block; }
+
+/* ── RPP section layout ───────────────────────────────────── */
+#sec-rpp nav {
+  position:absolute; top:0; left:0; right:0; height:48px; z-index:100;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 24px; gap:24px; flex-shrink:0;
+}
+#sec-rpp .page {
+  display:none; position:absolute;
+  top:48px; left:0; right:0; bottom:0;
+}
+#sec-rpp .page.active { display:block; }
+#sec-rpp #page-problem { overflow-y:auto; padding:32px 40px; }
+#sec-rpp #page-graph  { overflow:hidden; }
+#sec-rpp #graph-canvas {
+  position:absolute; inset:0; width:100%; height:100%;
+  cursor:grab; display:block;
+}
+#sec-rpp #graph-canvas:active { cursor:grabbing; }
+#sec-rpp #info-panel  { position:absolute; top:16px; right:16px; }
+#sec-rpp /* #legend removed — scoped */
+#sec-rpp #zoom-controls { position:absolute; bottom:16px; right:16px; }
+#sec-rpp #tooltip     { position:fixed; }
+
+/* ── ARCH section layout ──────────────────────────────────── */
+#sec-arch header {
+  position:absolute; top:0; left:0; right:0; height:48px; z-index:100;
+}
+#sec-arch /* #arch-canvas scoped */
+#sec-arch #arch-canvas:active { cursor:grabbing; }/* arch-layer-view controlled by JS */
+#sec-arch /* #arch-panel scoped */
+#sec-arch #a-lv-panel, #sec-arch #arch-lv-panel {
+  position:absolute; top:64px; right:16px;
+  max-height:calc(100% - 80px);
+}
+#sec-arch /* #arch-legend scoped */
+#sec-arch /* #arch-zoom scoped */
+#sec-arch /* arch-tip handled by #sec-arch scope */
+
+400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+
+
+
+
+
+
+/* ── NAV ─────────────────────────────────────────────────────── */
+nav {
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 24px;
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+}
+.nav-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--bank-color);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+.nav-tabs { display: flex; gap: 4px; flex: 1; }
+.nav-tab {
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all .15s;
+  background: none;
+}
+.nav-tab:hover { color: var(--text); background: var(--surface2); }
+.nav-tab.active {
+  color: var(--bank-color);
+  background: #0ea5e915;
+  border-color: #0ea5e930;
+}
+.nav-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: auto;
+  background: var(--surface2);
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+/* ── PAGES ───────────────────────────────────────────────────── */
+.page { display: none; height: calc(100vh - 52px); overflow: hidden; }
+.page.active { display: flex; }
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE 1 — THE PROBLEM
+══════════════════════════════════════════════════════════════ */
+#page-problem {
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 32px 40px;
+  gap: 28px;
+}
+.problem-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.02em;
+  margin-bottom: 6px;
+}
+.problem-header p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 760px;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.prob-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.prob-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.prob-card.red::before { background: var(--risk-high); }
+.prob-card.amber::before { background: var(--risk-med); }
+.prob-card.blue::before { background: var(--bank-color); }
+.prob-card.green::before { background: var(--known-color); }
+
+.prob-card .step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  margin-bottom: 10px;
+  opacity: .6;
+}
+.prob-card.red .step-num { color: var(--risk-high); }
+.prob-card.amber .step-num { color: var(--risk-med); }
+.prob-card.blue .step-num { color: var(--bank-color); }
+.prob-card.green .step-num { color: var(--known-color); }
+
+.prob-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.prob-card p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.prob-card strong { color: var(--text); font-weight: 600; }
+
+.reg-strip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 24px;
+}
+.reg-strip h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bank-color);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+}
+.reg-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.reg-item {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 200px;
+}
+.reg-item .reg-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--bank-color);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.reg-item p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.gap-box {
+  background: #1a0e0e;
+  border: 1px solid #5a1a1a;
+  border-left: 3px solid var(--risk-high);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+.gap-box h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--risk-high);
+  margin-bottom: 6px;
+}
+.gap-box p { font-size: 13px; color: #c0a0a0; line-height: 1.6; }
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE 2 — INTERACTIVE GRAPH
+══════════════════════════════════════════════════════════════ */
+#page-graph {
+  position: relative;
+  overflow: hidden;
+}
+#graph-canvas {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+}
+#graph-canvas:active { cursor: grabbing; }
+
+/* Info panel */
+#info-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px #00000060;
+  transition: opacity .2s;
+  z-index: 10;
+}
+#info-panel.empty { opacity: 0.4; pointer-events: none; }
+.info-header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.info-type-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.info-title {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  color: var(--text);
+}
+.info-type-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.info-
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.info-row-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 500;
+}
+.info-row-val {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.risk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+}
+.risk-pill.high { background: #3a0a0a; color: var(--risk-high); border: 1px solid #5a1a1a; }
+.risk-pill.med  { background: #2a1a00; color: var(--risk-med);  border: 1px solid #4a3000; }
+.risk-pill.low  { background: #0a2a0a; color: var(--risk-low);  border: 1px solid #1a4a1a; }
+.risk-pill.none { background: #1a1a2a; color: var(--risk-none); border: 1px solid #2a2a4a; }
+.reg-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.reg-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-weight: 500;
+}
+.reg-tag.mlr { color: #f59e0b; border-color: #4a3000; background: #1e1400; }
+.reg-tag.fca { color: #60a5fa; border-color: #1a3a6a; background: #0a1a2e; }
+.reg-tag.poca { color: #f87171; border-color: #5a1a1a; background: #1e0a0a; }
+.reg-tag.jmlsg { color: #a78bfa; border-color: #3a2a6a; background: #140f2e; }
+
+.info-empty-msg {
+  padding: 24px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.info-empty-msg .hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 8px;
+}
+
+/* Legend */
+/* #legend removed — scoped */
+.leg-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.leg-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.leg-rect { width: 14px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* Zoom controls */
+#zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+.zoom-btn {
+  width: 32px; height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.zoom-btn:hover { background: var(--surface2); }
+
+/* Tooltip */
+#tooltip {
+  position: absolute;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  display: none;
+  z-index: 20;
+  max-width: 200px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px #00000050;
+}
+
+500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+
+
+*, *::before, 
+
+
+
+
+/* ── HEADER ── */
+/* header position:fixed removed — scoped under #sec-arch */
+#sec-arch header { position: absolute; top: 0; left: 0; right: 0; height: 48px; }
+.h-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .04em;
+  color: var(--col-orch);
+}
+.h-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.h-sep { width: 1px; height: 20px; background: var(--border2); }
+.h-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+.h-hint {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: .04em;
+}
+
+/* ── TABS ── */
+.h-tabs { display: flex; gap: 3px; margin-left: 16px; }
+.h-tab {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: none;
+  color: var(--muted);
+  transition: all .15s;
+  letter-spacing: .02em;
+}
+.h-tab:hover { color: var(--text); background: var(--surface2); }
+.h-tab.active {
+  color: var(--col-orch);
+  background: rgba(192,132,252,0.1);
+  border-color: rgba(192,132,252,0.25);
+}/* arch-layer-view controlled by JS */
+#canvas.hidden { display: none; }
+#arch-panel.canvas-hidden { display: none !important; }
+
+/* Layer stack */
+.lv-stack { display: flex; flex-direction: column; gap: 0; max-width: 1100px; margin: 0 auto; }
+
+.lv-layer {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  position: relative;
+}
+.lv-layer-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.lv-layer-header:hover { background: var(--surface2); }
+.lv-layer-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+.lv-layer-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  flex: 1;
+}
+.lv-layer-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+.lv-layer-regs { display: flex; gap: 5px; }
+.lv-reg-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.lv-chevron {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.lv-layer.collapsed .lv-chevron { transform: rotate(-90deg); }
+
+.lv-layer-
+.lv-layer.collapsed .lv-layer-
+
+/* Component cards */
+.lv-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 15px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .15s;
+  position: relative;
+  overflow: hidden;
+}
+.lv-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+}
+.lv-card:hover { transform: translateY(-2px); background: var(--surface2); }
+.lv-card.selected { border-color: var(--col-orch); background: rgba(192,132,252,0.05); }
+
+.lv-card-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+.lv-card-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.lv-card-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.lv-card-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.lv-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.lv-card-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+/* Flow connectors between layers */
+.lv-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 20px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+}
+.lv-conn-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.lv-conn-line {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+}
+.lv-conn-line::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  right: 0;
+  height: 50%;
+  animation: flow-down 1.5s linear infinite;
+  border-radius: 1px;
+}
+@keyframes flow-down {
+  from { top: -50%; }
+  to   { top: 100%; }
+}
+.lv-conn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Detail panel — layered view */
+/* lv-panel scoped under section */
+#sec-arch #a-lv-panel { position: absolute; }
+#lv-panel.hidden { opacity:0; transform:translateX(12px); pointer-events:none; }/* arch-layer-view controlled by JS *//* arch-layer-view controlled by JS */
+
+/* Pulsing dots on layer headers */
+@keyframes pulse-dot {
+  0%,100% { opacity:.4; transform:scale(1); }
+  50% { opacity:1; transform:scale(1.3); }
+}
+.lv-pulse {
+  width:7px; height:7px; border-radius:50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+
+/* ── CANVAS ── */
+/* arch-canvas positioning handled by #sec-arch scope */
+#arch-canvas:active { cursor: grabbing; }
+
+/* ── DETAIL PANEL ── */
+/* arch-panel positioning handled by #sec-arch scope */
+#arch-panel.hidden { opacity: 0; transform: translateX(12px); pointer-events: none; }
+
+.panel-header {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  opacity: .7;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.panel-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.panel-
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.p-section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 4px;
+}
+.p-text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.p-text strong { color: var(--text); font-weight: 500; }
+
+.p-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.p-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-weight: 500;
+}
+.p-tag.indigo  { color: var(--col-agent);    border-color: #4f46e520; background: #4f46e510; }
+.p-tag.purple  { color: var(--col-orch);     border-color: #7c3aed20; background: #7c3aed10; }
+.p-tag.emerald { color: var(--col-external); border-color: #05966920; background: #05966910; }
+.p-tag.orange  { color: var(--col-human);    border-color: #c2410c20; background: #c2410c10; }
+.p-tag.rose    { color: var(--col-aml);      border-color: #be123c20; background: #be123c10; }
+.p-tag.cyan    { color: var(--col-trigger);  border-color: #0891b220; background: #0891b210; }
+.p-tag.yellow  { color: var(--col-data);     border-color: #ca8a0420; background: #ca8a0410; }
+
+.p-data-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.p-data-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.p-data-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.p-data-row::before { content: '→'; color: var(--col-agent); flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.p-data-row.alert::before { content: '⚠'; color: var(--col-aml); }
+.p-data-row.ok::before { content: '✓'; color: var(--col-external); }
+.p-data-row.human::before { content: '◈'; color: var(--col-human); }
+
+.p-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+}
+.p-status.active { background: #052e1650; color: var(--col-external); border: 1px solid #065f4620; }
+.p-status.alert  { background: #4c051550; color: var(--col-aml);      border: 1px solid #9f123650; }
+.p-status.wait   { background: #1c1b4b50; color: var(--col-agent);    border: 1px solid #3730a350; }
+.p-status.human  { background: #431a0550; color: var(--col-human);    border: 1px solid #92400e50; }
+
+.p-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+/* ── LEGEND ── */
+/* arch-legend positioning handled by #sec-arch scope */
+.leg-group { margin-bottom: 8px; }
+.leg-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 5px;
+}
+.leg-row { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+.leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.leg-line { width: 20px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.leg-dline { width: 20px; height: 0; border-top: 2px dashed; flex-shrink: 0; opacity: .8; }
+
+/* ── ZOOM ── */
+/* arch-zoom positioning handled by #sec-arch scope */
+.z-btn {
+  width: 34px; height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  font-family: 'DM Mono', monospace;
+}
+.z-btn:hover { background: var(--surface2); border-color: var(--col-agent); color: var(--col-agent); }
+
+/* ── TOOLTIP ── */
+/* arch-tip handled by #sec-arch scope */
+
+
+/* ── ARCH SECTION OVERRIDES (must come last) ── */
+#sec-arch header {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 48px !important;
+  z-index: 100;
+}
+#sec-arch #arch-canvas {
+  position: absolute !important;
+  top: 48px !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  width: 100% !important; height: calc(100% - 48px) !important;
+}/* arch-layer-view controlled by JS *//* arch-layer-view controlled by JS */
+#sec-arch #arch-panel {
+  position: absolute !important;
+  top: 64px !important; right: 16px !important;
+  max-height: calc(100% - 80px) !important;
+  z-index: 50;
+}
+#sec-arch #a-lv-panel {
+  position: absolute !important;
+  top: 64px !important; right: 16px !important;
+  max-height: calc(100% - 80px) !important;
+  z-index: 50;
+}
+#sec-arch #arch-legend {
+  position: absolute !important;
+  bottom: 16px !important; left: 16px !important;
+  z-index: 50;
+}
+#sec-arch #arch-zoom {
+  position: absolute !important;
+  bottom: 16px !important; right: 16px !important;
+  z-index: 50;
+}
+#sec-arch #arch-tip {
+  position: fixed !important;
+  z-index: 999;
+}
+#sec-arch #arch-canvas.hidden { display: none !important; }
+#sec-arch #arch-panel.hidden { opacity:0; transform:translateX(12px); pointer-events:none; }
+#sec-arch #a-lv-panel.hidden { opacity:0; transform:translateX(12px); pointer-events:none; }
+#sec-arch #arch-panel.canvas-hidden { display: none !important; }
+#sec-arch #arch-legend.canvas-hidden { display: none !important; }
+#sec-arch #arch-zoom.canvas-hidden { display: none !important; }
+
+/* RPP SECTION OVERRIDES */
+#sec-rpp nav {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 48px !important;
+  z-index: 100;
+}
+#sec-rpp .page {
+  position: absolute !important;
+  top: 48px !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  display: none;
+}
+#sec-rpp .page.active { display: block !important; }
+#sec-rpp #page-problem {
+  overflow-y: auto !important;
+  padding: 32px 40px !important;
+}
+#sec-rpp #page-graph { overflow: hidden !important; }
+#sec-rpp #graph-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+}
+#sec-rpp #info-panel  { position: absolute !important; top: 16px !important; right: 16px !important; z-index: 50; }
+#sec-rpp /* #legend removed — scoped */
+#sec-rpp #zoom-controls { position: absolute !important; bottom: 16px !important; right: 16px !important; z-index: 50; }
+#sec-rpp #tooltip     { position: fixed !important; z-index: 999; }
+
+/* ══════════════════════════════════════════════════
+   DEFINITIVE LAYOUT OVERRIDES — applied last
+══════════════════════════════════════════════════ */
+
+/* Master nav: always on top */
+#master-nav { position: fixed !important; top: 0 !important; z-index: 9999 !important; }
+
+/* Sections fill the space below master nav */
+.m-sec { position: fixed !important; top: 54px !important; left: 0 !important; right: 0 !important; bottom: 0 !important; }
+
+/* ── ARCH section ── */
+#sec-arch header {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 48px !important; z-index: 200 !important;
+  display: flex !important; align-items: center !important;
+  padding: 0 20px !important; gap: 10px !important;
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  overflow: hidden !important;
+}
+#sec-arch #arch-canvas {
+  position: absolute !important;
+  top: 48px !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  width: 100% !important; height: calc(100% - 48px) !important;
+  cursor: grab;
+}
+#sec-arch #arch-canvas:active { cursor: grabbing !important; }
+#sec-arch #arch-canvas.hidden { display: none !important; }/* arch-layer-view controlled by JS *//* arch-layer-view controlled by JS */
+#sec-arch #arch-panel {
+  position: absolute !important;
+  top: 64px !important; right: 16px !important;
+  max-height: calc(100% - 80px) !important; z-index: 300 !important;
+}
+#sec-arch #a-lv-panel {
+  position: absolute !important;
+  top: 64px !important; right: 16px !important;
+  max-height: calc(100% - 80px) !important; z-index: 300 !important;
+}
+#sec-arch #arch-legend {
+  position: absolute !important; bottom: 16px !important; left: 16px !important; z-index: 200 !important;
+}
+#sec-arch #arch-zoom {
+  position: absolute !important; bottom: 16px !important; right: 16px !important; z-index: 200 !important;
+}
+#sec-arch #arch-tip { position: fixed !important; z-index: 9998 !important; }
+#sec-arch #arch-panel.hidden,
+#sec-arch #a-lv-panel.hidden { opacity: 0 !important; pointer-events: none !important; transform: translateX(12px) !important; }
+#sec-arch #arch-panel.canvas-hidden { display: none !important; }
+#sec-arch #arch-legend.canvas-hidden,
+#sec-arch #arch-zoom.canvas-hidden { display: none !important; }
+
+/* ── RPP section ── */
+#sec-rpp nav {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 48px !important; z-index: 200 !important;
+}
+#sec-rpp .page {
+  position: absolute !important;
+  top: 48px !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  display: none !important;
+}
+#sec-rpp .page.active { display: block !important; }
+#sec-rpp #page-problem { overflow-y: auto !important; padding: 32px 40px !important; }
+#sec-rpp #page-graph   { overflow: hidden !important; }
+#sec-rpp #graph-canvas {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important; cursor: grab;
+}
+#sec-rpp #graph-canvas:active { cursor: grabbing !important; }
+#sec-rpp #info-panel   { position: absolute !important; top: 16px !important; right: 16px !important; z-index: 200 !important; }
+#sec-rpp #legend       { position: absolute !important; bottom: 16px !important; left: 16px !important; z-index: 200 !important; }
+#sec-rpp #zoom-controls{ position: absolute !important; bottom: 16px !important; right: 16px !important; z-index: 200 !important; }
+#sec-rpp #tooltip      { position: fixed !important; z-index: 9998 !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══ MASTER NAV ══════════════════════════════════════════ -->
+<div id="master-nav">
+  <div class="m-logo">KYC · AML</div>
+  <div class="m-sep"></div>
+  <button class="m-btn" id="m-btn-rpp" onclick="masterNav(&#39;rpp&#39;,this)">
+    <span class="m-num">1</span> Related Party Problem
+  </button>
+  <button class="m-btn active" id="m-btn-arch" onclick="masterNav(&#39;arch&#39;,this)">
+    <span class="m-num">2</span> Agentic KYC Architecture
+  </button>
+  <div class="m-sep"></div>
+  <div class="m-hint">FCA FCG Nov 2024 · MLR 2017 · JMLSG · Click any node for regulatory detail</div>
+</div>
+
+<!-- ═══ SECTION 1: RELATED PARTY PROBLEM ════════════════════ -->
+<div id="sec-rpp" class="m-sec">
+  <nav>
+    <div class="nav-logo">RELATED PARTY PROBLEM</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="rTab(&#39;problem&#39;,this)">① The Problem</button>
+      <button class="nav-tab" onclick="rTab(&#39;graph&#39;,this)">② Interactive Entity Graph</button>
+    </div>
+    <div class="nav-badge">FCA FCG Nov 2024 · MLR 2017 · JMLSG</div>
+  </nav>
+<!-- ══════════════════════════════════════════
+     PAGE 1 — THE PROBLEM
+═══════════════════════════════════════════ -->
+<div id="page-problem" class="page active">
+
+  <div class="problem-header">
+    <h1>The Related Party Problem</h1>
+    <p>When a limited company holds a bank account, the bank's CDD obligation extends beyond the company itself to its directors, UBOs and related entities. The problem: the bank is not automatically notified when these change — creating a compliance exposure that can persist for months or years undetected.</p>
+  </div>
+
+  <div class="problem-grid">
+    <div class="prob-card blue">
+      <div class="step-num">STEP 01 — ONBOARDING</div>
+      <h3>Company onboarded — CDD passes</h3>
+      <p>Company A applies for a business account. The bank performs <strong>CDD under MLR 2017 reg.28</strong>: the company's directors, persons of significant control (PSCs), and UBOs are all identified, verified and screened against PEP lists and sanctions databases. All pass. The account is opened.</p>
+    </div>
+    <div class="prob-card green">
+      <div class="step-num">STEP 02 — POST-ONBOARDING</div>
+      <h3>Ownership chain exists — bank sees only Company A</h3>
+      <p>Unknown to the bank at the time, Company A is <strong>51% owned by Company B</strong>, which is in turn <strong>51% owned by Company C</strong>. Company B and C have their own directors and related persons. These individuals are <strong>related parties</strong> of the bank's customer — but they are not customers of the bank themselves.</p>
+    </div>
+    <div class="prob-card amber">
+      <div class="step-num">STEP 03 — THE EVENT</div>
+      <h3>Director change filed at Companies House</h3>
+      <p>A new director is appointed to Company A and the change is filed at Companies House. <strong>The company is legally obliged to make this disclosure</strong> — but the bank is not automatically notified. Unless the bank monitors Companies House filings in real time, this change is invisible. The bank's account T&amp;Cs may require notification, but <strong>customer compliance with this obligation is rarely enforced.</strong></p>
+    </div>
+    <div class="prob-card red">
+      <div class="step-num">STEP 04 — THE EXPOSURE</div>
+      <h3>New director fails screening — bank doesn't know</h3>
+      <p>The new director is a <strong>PEP, a sanctioned individual, or has significant adverse media</strong>. Under MLR 2017 reg.33, this would trigger <strong>Enhanced Due Diligence (EDD)</strong> — but because the bank hasn't detected the change, no EDD review is conducted. Transactions continue flowing through the account. The bank is <strong>potentially non-compliant</strong> with reg.28(11) (ongoing monitoring) and the FCA FCG's connected parties obligation.</p>
+    </div>
+  </div>
+
+  <div class="reg-strip">
+    <h3>REGULATORY OBLIGATIONS IN PLAY</h3>
+    <div class="reg-items">
+      <div class="reg-item">
+        <div class="reg-label">MLR 2017 reg.28(11)</div>
+        <p>Ongoing monitoring: banks must keep CDD documents up to date, including the ownership and control structure of legal entities. Changes must be detected and reflected.</p>
+      </div>
+      <div class="reg-item">
+        <div class="reg-label">MLR 2017 reg.28(3)</div>
+        <p>Banks must identify beneficial owners and understand the ownership and control structure of any legal person they do business with — not just the named entity.</p>
+      </div>
+      <div class="reg-item">
+        <div class="reg-label">FCA FCG (Nov 2024)</div>
+        <p>Firms must identify connected parties and corporate structures that may be subject to sanctions — not just the named customer. The Nov 2024 update made this explicit.</p>
+      </div>
+      <div class="reg-item">
+        <div class="reg-label">MLR 2017 reg.33</div>
+        <p>EDD is required where a related party is a PEP, connected to a high-risk third country, or shows adverse media. Failure to detect the trigger means EDD is never applied.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="gap-box">
+    <h3>THE COMPLIANCE STANDARD — NOT OMNISCIENCE, BUT DOCUMENTED REASONABLE MEASURES</h3>
+    <p>The FCA does not expect banks to know about every director change the instant it happens. The standard is <strong>risk-based reasonable measures</strong>. A bank with no process for detecting director changes at all is clearly non-compliant. A bank with a documented, risk-proportionate monitoring system (e.g. Companies House API monitoring for high-risk customers, annual refresh for standard-risk) that a change slips through is in a much stronger position. The FCA's 2025 multi-firm CDD review found that inadequate event-driven review triggers were a systemic weakness across UK banks — most policies relied on RM judgement rather than automated systematic detection.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — INTERACTIVE GRAPH
+═══════════════════════════════════════════ -->
+<div id="page-graph" class="page">
+  <canvas id="graph-canvas"></canvas>
+
+  <!-- Info panel -->
+  <div id="info-panel" class="empty">
+    <div id="info-content">
+      <div class="info-empty-msg">
+        Click any node to see regulatory detail
+        <div class="hint">← drag to pan · scroll to zoom</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="leg-title">Node types</div>
+    <div class="leg-row"><div class="leg-rect" style="background:#a78bfa;border-radius:3px"></div> Company / legal entity</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#22c55e"></div> Person — known to bank</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#f97316"></div> Person — unknown to bank</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div> Person — sanctions / EDD</div>
+    <div class="leg-title" style="margin-top:6px">Edge colour = CDD/EDD obligation</div>
+    <div class="leg-row"><div style="width:22px;height:2.5px;background:#22c55e;border-radius:2px;box-shadow:0 0 5px #22c55e"></div> Known — standard CDD</div>
+    <div class="leg-row"><div style="width:22px;height:2.5px;background:#f59e0b;border-radius:2px;box-shadow:0 0 5px #f59e0b"></div> Unknown — CDD required</div>
+    <div class="leg-row"><div style="width:22px;height:2.5px;background:#ef4444;border-radius:2px;box-shadow:0 0 8px #ef4444"></div> EDD mandatory / high risk</div>
+    <div class="leg-row"><div style="width:22px;height:2.5px;background:#a78bfa;border-radius:2px;box-shadow:0 0 5px #a78bfa"></div> Ownership chain</div>
+  </div>
+
+  <div id="zoom-controls">
+    <button class="zoom-btn" onclick="rZoom(1.25)" title="Zoom in">+</button>
+    <button class="zoom-btn" onclick="rZoom(0.8)" title="Zoom out">−</button>
+    <button class="zoom-btn" onclick="rReset()" title="Reset" style="font-size:11px">⌂</button>
+  </div>
+
+  <div id="tooltip"></div>
+</div>
+</div>
+
+<!-- ═══ SECTION 2: AGENTIC ARCHITECTURE ════════════════════ -->
+<div id="sec-arch" class="m-sec active">
+  <header>
+    <div class="h-logo">AGENTIC KYC</div>
+    <div class="h-sep"></div>
+    <div class="h-tabs">
+      <button class="h-tab" id="a-tab-graph" onclick="aTab(&#39;graph&#39;)">① Agent Graph</button>
+      <button class="h-tab active" id="a-tab-layers" onclick="aTab(&#39;layers&#39;)">② Layered Architecture</button>
+    </div>
+    <div class="h-sep"></div>
+    <div class="h-badge">MLR 2017 · FCA FCG Nov 2024</div>
+    <div class="h-hint" id="a-h-hint">CLICK any component card for detail</div>
+  </header>
+<canvas id="arch-canvas" width="1272" height="661" style="display: none; position: absolute; inset: 48px 0px 0px; width: 100%; height: calc(100% - 48px); cursor: grab;"></canvas>
+
+<!-- ═══════════ LAYERED ARCHITECTURE VIEW ═══════════ -->
+<div id="arch-layer-view" style="display: block; position: absolute; inset: 48px 0px 0px; overflow-y: auto; padding: 28px 380px 60px 32px; background: rgb(7, 11, 20);">
+  <div class="lv-stack">
+
+    <!-- LAYER 6: HUMAN GOVERNANCE -->
+    <div class="lv-layer" id="lv-6" style="border-color:#fb923c40">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-6&#39;)" style="background:rgba(251,146,60,0.06)">
+        <div class="lv-layer-num" style="border-color:#fb923c;color:#fb923c;background:rgba(251,146,60,0.12)">6</div>
+        <div class="lv-pulse" style="background:#fb923c;animation-delay:.6s"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#fb923c">Human Governance &amp; Oversight Layer</div>
+          <div class="lv-layer-sub">Relationship Manager · KYC Analyst · Compliance (2LoD) · Senior Manager (SMF17) · MLRO</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#fb923c;border-color:#fb923c30;background:#fb923c10">MLR reg.33(5)</span>
+          <span class="lv-reg-tag" style="color:#fb923c;border-color:#fb923c30;background:#fb923c10">SMF 17</span>
+          <span class="lv-reg-tag" style="color:#fb923c;border-color:#fb923c30;background:#fb923c10">POCA 2002</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;h_rm&#39;)" style="--card-col:#fb923c"><div style="position: absolute; top: 0px; left: 0px; right: 0px; height: 3px; background: rgb(251, 146, 60); border-radius: 10px 10px 0px 0px;"></div><div style="position: absolute; top: 0px; left: 0px; right: 0px; height: 3px; background: rgb(251, 146, 60); border-radius: 10px 10px 0px 0px;"></div><div class="lv-card::before" style="background:#fb923c"></div>
+          <span class="lv-card-icon">🤝</span>
+          <div class="lv-card-name">Relationship Manager</div>
+          <div class="lv-card-sub">1st Line — Customer contact</div>
+          <div class="lv-card-desc">Customer-facing; requests additional information; must not tip off if SAR in progress (POCA s.333A).</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#fb923c;border-color:#fb923c30">1LoD</span><span class="lv-card-tag" style="color:#6a85a8;border-color:#1e3352">Human</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;h_kyc&#39;)" style="--card-col:#fb923c"><div style="position: absolute; top: 0px; left: 0px; right: 0px; height: 3px; background: rgb(251, 146, 60); border-radius: 10px 10px 0px 0px;"></div><div style="position: absolute; top: 0px; left: 0px; right: 0px; height: 3px; background: rgb(251, 146, 60); border-radius: 10px 10px 0px 0px;"></div>
+          <span class="lv-card-icon">👤</span>
+          <div class="lv-card-name">KYC Analyst</div>
+          <div class="lv-card-sub">1st Line — Case review &amp; decision</div>
+          <div class="lv-card-desc">Reviews AI-prepared case, validates findings, applies professional judgement. Approves or escalates to compliance.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#fb923c;border-color:#fb923c30">1LoD</span><span class="lv-card-tag" style="color:#6a85a8;border-color:#1e3352">Human</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;h_sm&#39;)">
+          <span class="lv-card-icon">🏦</span>
+          <div class="lv-card-name">Senior Manager — SMF17</div>
+          <div class="lv-card-sub">Written EDD approval — mandatory</div>
+          <div class="lv-card-desc">MLR reg.33(5) requires written, named, dated approval for all EDD relationships. AI pre-populates the approval memo.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#fb923c;border-color:#fb923c30">SMF 17</span><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">EDD Gate</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;h_compliance&#39;)">
+          <span class="lv-card-icon">⚖</span>
+          <div class="lv-card-name">Compliance Officer</div>
+          <div class="lv-card-sub">2nd Line of Defence (2LoD)</div>
+          <div class="lv-card-desc">Independent EDD review, professional scepticism, risk appetite assessment. FCA expects genuine challenge, not rubber-stamping.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#c084fc;border-color:#c084fc30">2LoD</span><span class="lv-card-tag" style="color:#6a85a8;border-color:#1e3352">Human</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;h_mlro&#39;)">
+          <span class="lv-card-icon">🔒</span>
+          <div class="lv-card-name">MLRO</div>
+          <div class="lv-card-sub">SAR decisions · NCA reporting</div>
+          <div class="lv-card-desc">SAR filing, DAML requests, tipping-off management, board reporting. Holds SMF 17. Last human gate before NCA disclosure.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">POCA 2002</span><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">SAR</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR 6→5 -->
+    <div class="lv-connector">
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#fb923c30"><div style="background:#fb923c;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.8s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#fb923c"></div>
+      </div>
+      <span>Case files · Approval memos · EDD sign-off · SAR referrals</span>
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#818cf830"><div style="background:#818cf8;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.4s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#818cf8"></div>
+      </div>
+      <span>Compliance narrative · Recommended actions · Pre-populated case</span>
+    </div>
+
+    <!-- LAYER 5: ORCHESTRATION -->
+    <div class="lv-layer" id="lv-5" style="border-color:#c084fc40">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-5&#39;)" style="background:rgba(192,132,252,0.06)">
+        <div class="lv-layer-num" style="border-color:#c084fc;color:#c084fc;background:rgba(192,132,252,0.12)">5</div>
+        <div class="lv-pulse" style="background:#c084fc;animation-delay:.3s"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#c084fc">Orchestration &amp; Narrative Layer</div>
+          <div class="lv-layer-sub">KYC Orchestrator Agent · Compliance Narrative Agent · Case Management</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#c084fc;border-color:#c084fc30;background:#c084fc10">FCA CDD Review 2025</span>
+          <span class="lv-reg-tag" style="color:#c084fc;border-color:#c084fc30;background:#c084fc10">MLR reg.40</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;orchestrator&#39;)">
+          <span class="lv-card-icon">⬡</span>
+          <div class="lv-card-name">KYC Orchestrator Agent</div>
+          <div class="lv-card-sub">Master coordination · Routing · State management</div>
+          <div class="lv-card-desc">Receives triggers, assigns sub-agents, aggregates results, applies risk policy, determines routing: auto-resolve / CDD refresh / EDD / MLRO escalation.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#c084fc;border-color:#c084fc30">Orchestrator</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">LLM + Rules</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_narrative&#39;)">
+          <span class="lv-card-icon">📝</span>
+          <div class="lv-card-name">Compliance Narrative Agent</div>
+          <div class="lv-card-sub">LLM · RAG · FCA rationale generation</div>
+          <div class="lv-card-desc">Generates FCA-compliant documented rationale for every decision. Uses RAG — only retrieved facts, no hallucination. Pre-populates case file and approval memos.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">LLM+RAG</span><span class="lv-card-tag" style="color:#c084fc;border-color:#c084fc30">FCA Rationale</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;case_mgmt&#39;)">
+          <span class="lv-card-icon">🗂</span>
+          <div class="lv-card-name">Case Management System</div>
+          <div class="lv-card-sub">5-year retention · Audit trail · Approvals</div>
+          <div class="lv-card-desc">Stores all CDD/EDD records, AI outputs, human decisions, and senior management approvals. MLR reg.40: 5-year retention post-relationship end.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#facc15;border-color:#facc1530">Records</span><span class="lv-card-tag" style="color:#facc15;border-color:#facc1530">MLR reg.40</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR 5→4 -->
+    <div class="lv-connector">
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#818cf830"><div style="background:#818cf8;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.1s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#818cf8"></div>
+      </div>
+      <span>Agent commands · Task assignments · Policy parameters</span>
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#06b6d430"><div style="background:#06b6d4;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.3s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#06b6d4"></div>
+      </div>
+      <span>Sub-agent results · Risk scores · Screening findings</span>
+    </div>
+
+    <!-- LAYER 4: AI AGENTS -->
+    <div class="lv-layer" id="lv-4" style="border-color:#818cf840">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-4&#39;)" style="background:rgba(129,140,248,0.06)">
+        <div class="lv-layer-num" style="border-color:#818cf8;color:#818cf8;background:rgba(129,140,248,0.12)">4</div>
+        <div class="lv-pulse" style="background:#818cf8"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#818cf8">Specialist AI Agent Layer</div>
+          <div class="lv-layer-sub">Corporate Registry · Identity Verification · Sanctions/PEP · Adverse Media · Risk Scoring</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#818cf8;border-color:#818cf830;background:#818cf810">MLR reg.28(3)</span>
+          <span class="lv-reg-tag" style="color:#818cf8;border-color:#818cf830;background:#818cf810">MLR reg.33</span>
+          <span class="lv-reg-tag" style="color:#818cf8;border-color:#818cf830;background:#818cf810">FCA FCG</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_registry&#39;)">
+          <span class="lv-card-icon">🏢</span>
+          <div class="lv-card-name">Corporate Registry Agent</div>
+          <div class="lv-card-sub">Companies House · UBO chain · Delta detection</div>
+          <div class="lv-card-desc">Fetches and parses Companies House data. Recursively traces ownership chain to find all UBOs. Produces delta: new vs previous director/UBO list.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.5</span><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">CH API</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_idv&#39;)">
+          <span class="lv-card-icon">🪪</span>
+          <div class="lv-card-name">Identity Verification Agent</div>
+          <div class="lv-card-sub">Equifax · Experian · Loqate · Onfido</div>
+          <div class="lv-card-desc">Verifies each new individual via credit bureau (existence, address, fraud flags) and biometric eIDV for high-risk cases. Meets MLR reg.28(19) electronic verification standard.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.28(19)</span><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">eIDV</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_screen&#39;)">
+          <span class="lv-card-icon">🛡</span>
+          <div class="lv-card-name">Sanctions + PEP Screening Agent</div>
+          <div class="lv-card-sub">UK consolidated · OFAC · UN · EU · PEP DB</div>
+          <div class="lv-card-desc">Screens all related parties — not just direct directors. LLM assesses match quality and produces documented false-positive rationale. FCA FCG Nov 2024 explicit obligation.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">MLR reg.35</span><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">FCA FCG</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_media&#39;)">
+          <span class="lv-card-icon">📰</span>
+          <div class="lv-card-name">Adverse Media Agent</div>
+          <div class="lv-card-sub">Moody's · Refinitiv · Dow Jones · Web</div>
+          <div class="lv-card-desc">LLM-powered context-aware media search. Distinguishes relevant from irrelevant coverage. Categorises by crime type. Ongoing monitoring — not just point-in-time.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.28(11)</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">Ongoing</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;a_risk&#39;)">
+          <span class="lv-card-icon">📈</span>
+          <div class="lv-card-name">Risk Scoring Agent</div>
+          <div class="lv-card-sub">Composite score · EDD triggers · Routing</div>
+          <div class="lv-card-desc">Aggregates all findings. Applies bank's risk policy. Produces Low/Medium/High score with factor breakdown. Determines action: auto-resolve / CDD / EDD / MLRO.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.18</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">Risk Model</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR 4→3 -->
+    <div class="lv-connector">
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#34d39930"><div style="background:#34d399;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 0.9s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#34d399"></div>
+      </div>
+      <span>eIDV requests · Address checks · Entity screening queries</span>
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#34d39930"><div style="background:#34d399;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.0s linear infinite 0.5s;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#34d399"></div>
+      </div>
+      <span>Verification results · Screening hits · Adverse media data</span>
+    </div>
+
+    <!-- LAYER 3: EXTERNAL APIs -->
+    <div class="lv-layer" id="lv-3" style="border-color:#34d39940">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-3&#39;)" style="background:rgba(52,211,153,0.05)">
+        <div class="lv-layer-num" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.12)">3</div>
+        <div class="lv-pulse" style="background:#34d399;animation-delay:.9s"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#34d399">External Data &amp; Verification APIs</div>
+          <div class="lv-layer-sub">Credit bureaux · Screening databases · Address services · eIDV · Companies House</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#34d399;border-color:#34d39930;background:#34d39910">Third-party services</span>
+          <span class="lv-reg-tag" style="color:#34d399;border-color:#34d39930;background:#34d39910">API integrations</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;ch_api&#39;)">
+          <span class="lv-card-icon">📋</span>
+          <div class="lv-card-name">Companies House API</div>
+          <div class="lv-card-sub">Gov.uk · PSC register · Filing history</div>
+          <div class="lv-card-desc">Structured data on UK companies: directors, PSCs, group structures, filing history. ECCTA 2023 identity verification improves data quality from 2024.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">Gov API</span><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">Free</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;equifax&#39;)">
+          <span class="lv-card-icon">💳</span>
+          <div class="lv-card-name">Equifax / Experian</div>
+          <div class="lv-card-sub">Identity verification · Fraud flags · Address</div>
+          <div class="lv-card-desc">Credit bureau eIDV: confirms individual existence, address at DOB, CIFAS fraud markers. Meets MLR reg.28(19) electronic verification standard.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">Credit Bureau</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.28(19)</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;complyadvantage&#39;)">
+          <span class="lv-card-icon">🔍</span>
+          <div class="lv-card-name">ComplyAdvantage / Dow Jones</div>
+          <div class="lv-card-sub">Sanctions · PEP database · Adverse media</div>
+          <div class="lv-card-desc">Aggregated sanctions lists (UK, OFAC, UN, EU), 600k+ PEP database including family/associates, adverse media from 1m+ sources. Real-time updates.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">Sanctions</span><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">PEP DB</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;loqate&#39;)">
+          <span class="lv-card-icon">📍</span>
+          <div class="lv-card-name">Loqate + Onfido / Entrust</div>
+          <div class="lv-card-sub">Address validation · Biometric eIDV · Docs</div>
+          <div class="lv-card-desc">PAF address validation, email/phone verification, biometric document checking (passport, DL), facial recognition and liveness detection for higher-risk cases.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">eIDV</span><span class="lv-card-tag" style="color:#34d399;border-color:#34d39930">Biometric</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR 3→2 -->
+    <div class="lv-connector">
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#f43f5e30"><div style="background:#f43f5e;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 0.8s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#f43f5e"></div>
+      </div>
+      <span>Sanctions hits · Adverse media alerts · High-risk flags</span>
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#06b6d430"><div style="background:#06b6d4;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.2s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#06b6d4"></div>
+      </div>
+      <span>SAR submissions · DAML requests · NCA disclosures</span>
+    </div>
+
+    <!-- LAYER 2: AML SYSTEMS -->
+    <div class="lv-layer" id="lv-2" style="border-color:#f43f5e40">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-2&#39;)" style="background:rgba(244,63,94,0.05)">
+        <div class="lv-layer-num" style="border-color:#f43f5e;color:#f43f5e;background:rgba(244,63,94,0.12)">2</div>
+        <div class="lv-pulse" style="background:#f43f5e;animation-delay:1.2s"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#f43f5e">AML Systems &amp; Law Enforcement Layer</div>
+          <div class="lv-layer-sub">Transaction Monitoring · NCA / UKFIU · Regulatory Reporting</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#f43f5e;border-color:#f43f5e30;background:#f43f5e10">POCA 2002</span>
+          <span class="lv-reg-tag" style="color:#f43f5e;border-color:#f43f5e30;background:#f43f5e10">TACT 2000</span>
+          <span class="lv-reg-tag" style="color:#f43f5e;border-color:#f43f5e30;background:#f43f5e10">SUP 15.3</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;tm_alert&#39;)">
+          <span class="lv-card-icon">📊</span>
+          <div class="lv-card-name">Transaction Monitoring System</div>
+          <div class="lv-card-sub">Internal AML · Alert generation · Calibrated rules</div>
+          <div class="lv-card-desc">Generates alerts when transactions deviate from the customer's declared risk profile. Also triggers the related party pipeline. FCA: must be calibrated per customer, not generic thresholds.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">Internal</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.28(11)</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,&#39;nca&#39;)">
+          <span class="lv-card-icon">⚡</span>
+          <div class="lv-card-name">NCA / UKFIU</div>
+          <div class="lv-card-sub">SAR receipt · DAML consent · Intelligence</div>
+          <div class="lv-card-desc">Receives SARs from MLRO via UKFIU portal. Issues DAML consent within 7 working days. Does not confirm or deny investigations to reporting banks.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">POCA 2002</span><span class="lv-card-tag" style="color:#f43f5e;border-color:#f43f5e30">DAML</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR 2→1 -->
+    <div class="lv-connector">
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#06b6d430"><div style="background:#06b6d4;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.5s linear infinite;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#06b6d4"></div>
+      </div>
+      <span>Filing events · Director change webhooks</span>
+      <div class="lv-conn-arrow">
+        <div class="lv-conn-line" style="background:#06b6d430"><div style="background:#06b6d4;position:absolute;top:-50%;left:0;right:0;height:50%;animation:flow-down 1.6s linear infinite 0.8s;border-radius:1px"></div></div>
+        <div class="lv-conn-dot" style="background:#06b6d4"></div>
+      </div>
+      <span>TM anomaly alerts · Risk re-assessment triggers</span>
+    </div>
+
+    <!-- LAYER 1: TRIGGERS -->
+    <div class="lv-layer" id="lv-1" style="border-color:#06b6d440">
+      <div class="lv-layer-header" onclick="aToggle(&#39;lv-1&#39;)" style="background:rgba(6,182,212,0.05)">
+        <div class="lv-layer-num" style="border-color:#06b6d4;color:#06b6d4;background:rgba(6,182,212,0.12)">1</div>
+        <div class="lv-pulse" style="background:#06b6d4;animation-delay:1.5s"></div>
+        <div>
+          <div class="lv-layer-title" style="color:#06b6d4">Event Trigger &amp; Detection Layer</div>
+          <div class="lv-layer-sub">Companies House Webhook · Periodic Scheduler · Manual Trigger</div>
+        </div>
+        <div class="lv-layer-regs">
+          <span class="lv-reg-tag" style="color:#06b6d4;border-color:#06b6d430;background:#06b6d410">Event-driven</span>
+          <span class="lv-reg-tag" style="color:#06b6d4;border-color:#06b6d430;background:#06b6d410">MLR reg.28(11)</span>
+        </div>
+        <div class="lv-chevron">▾</div>
+      </div>
+      <div class="lv-layer-body">
+        <div class="lv-card" onclick="aLvSel(this,&#39;ch_webhook&#39;)">
+          <span class="lv-card-icon">🏛</span>
+          <div class="lv-card-name">Companies House Webhook</div>
+          <div class="lv-card-sub">Real-time filing events · Director changes · PSC</div>
+          <div class="lv-card-desc">Streams filing events for all monitored companies in real time. Director appointments, resignations, PSC changes, address updates. The primary mitigation for the related party gap.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#06b6d4;border-color:#06b6d430">Real-time</span><span class="lv-card-tag" style="color:#06b6d4;border-color:#06b6d430">Gov API</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,null,&#39;periodic&#39;)">
+          <span class="lv-card-icon">🔄</span>
+          <div class="lv-card-name">Periodic KYC Refresh Scheduler</div>
+          <div class="lv-card-sub">Risk-tiered · Annual/3-year cycles</div>
+          <div class="lv-card-desc">Scheduled periodic refresh for all customers. High-risk: annual. Standard: 3-yearly. Triggers full re-run of agent pipeline. Safety net when event-driven monitoring misses changes.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#06b6d4;border-color:#06b6d430">Scheduled</span><span class="lv-card-tag" style="color:#818cf8;border-color:#818cf830">MLR reg.28(11)</span></div>
+        </div>
+        <div class="lv-card" onclick="aLvSel(this,null,&#39;manual&#39;)">
+          <span class="lv-card-icon">🖱</span>
+          <div class="lv-card-name">Manual Trigger / RM Referral</div>
+          <div class="lv-card-sub">RM flag · Compliance request · Adverse news</div>
+          <div class="lv-card-desc">RM or compliance team can manually trigger the pipeline when they receive new information — customer disclosure of a new director, adverse news spotted, or a client request that raises suspicion.</div>
+          <div class="lv-card-tags"><span class="lv-card-tag" style="color:#fb923c;border-color:#fb923c30">Human-initiated</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture summary footer -->
+    <div style="margin-top:24px;padding:20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:1100px;">
+      <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Architecture principles</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#c084fc;margin-bottom:4px">RAG — No Hallucination</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">All LLM outputs are grounded in retrieved documents only. The narrative agent cites sources and cannot invent sanctions or decisions.</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#fb923c;margin-bottom:4px">Human in the Loop</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">AI prepares and recommends. Humans decide and sign. FCA requires named, written EDD approval — AI cannot replace this.</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#818cf8;margin-bottom:4px">Three Lines of Defence</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">1LoD: RM + KYC Analyst. 2LoD: Compliance Officer. 3LoD: Internal Audit. AI augments all three but does not replace them.</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#34d399;margin-bottom:4px">Documented Rationale</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">Every decision generates a compliance narrative meeting the FCA's #1 finding: lack of documented rationale for EDD decisions.</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#06b6d4;margin-bottom:4px">Event-Driven Architecture</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">Companies House webhooks replace periodic manual checks. Director changes trigger immediate pipeline execution — closing the related party gap.</div>
+        </div>
+        <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:&#39;Syne&#39;,sans-serif;font-size:11px;font-weight:700;color:#facc15;margin-bottom:4px">Audit Trail by Design</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">Every agent output includes data sources, timestamps, model version, and retrieval log. Audit-ready for FCA inspection at any time.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Layered view detail panel -->
+<div id="a-lv-panel" class="hidden">
+  <div class="panel-header">
+    <div class="panel-eyebrow" id="a-lv-eyebrow" style="color:#818cf8">Component</div>
+    <div class="panel-title" id="a-lv-title">—</div>
+    <div class="panel-sub" id="a-lv-sub">—</div>
+  </div>
+  <div class="panel-body" id="a-lv-body"></div>
+</div>
+
+<div id="arch-panel" class="hidden" style="position: absolute; top: 64px; right: 16px; max-height: calc(100% - 80px); z-index: 300; display: none;">
+  <div class="panel-header">
+    <div class="panel-eyebrow" id="a-p-eyebrow">Agent</div>
+    <div class="panel-title" id="a-p-title">—</div>
+    <div class="panel-sub" id="a-p-sub">—</div>
+  </div>
+  <div class="panel-body" id="a-p-body"></div>
+</div>
+
+<div id="arch-legend" style="position: absolute; bottom: 16px; left: 16px; z-index: 200; display: none;">
+  <div class="leg-group">
+    <div class="leg-label">Node types</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#c084fc"></div>Orchestrator agent</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#818cf8"></div>Specialist AI agent</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#34d399"></div>External API / system</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#fb923c"></div>Human actor</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#f43f5e"></div>AML / compliance system</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#06b6d4"></div>Trigger / event source</div>
+  </div>
+  <div class="leg-group">
+    <div class="leg-label">Data flows</div>
+    <div class="leg-row"><div class="leg-line" style="background:#34d399"></div>Data / API response</div>
+    <div class="leg-row"><div class="leg-line" style="background:#818cf8"></div>Agent command</div>
+    <div class="leg-row"><div class="leg-line" style="background:#f43f5e"></div>Alert / escalation</div>
+    <div class="leg-row"><div class="leg-dline" style="border-color:#fb923c"></div>Human review</div>
+  </div>
+</div>
+
+<div id="arch-zoom" style="position: absolute; bottom: 16px; right: 16px; z-index: 200; display: none; flex-direction: column; gap: 4px;">
+  <button class="z-btn" onclick="aZoom(1.2)">+</button>
+  <button class="z-btn" onclick="aZoom(0.83)">−</button>
+  <button class="z-btn" onclick="aFit()" style="font-size:11px">⊡</button>
+</div>
+
+<div id="arch-tip"></div>
+</div>
+
+<script>
+// ═══ MASTER NAV ═════════════════════════════════════════════
+let _archInited = false;
+
+function masterNav(section, btn) {
+  document.querySelectorAll('.m-sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + section).classList.add('active');
+  btn.classList.add('active');
+  if (section === 'arch') {
+    if (!_archInited) {
+      _archInited = true;
+      setTimeout(function() { if (window.initArch) window.initArch(); }, 80);
+    }
+  }
+}
+
+// Card accent bars for arch layered view
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.lv-layer-body .lv-card').forEach(function(card) {
+    var col = card.style.getPropertyValue('--card-col');
+    if (col) {
+      var bar = document.createElement('div');
+      bar.style.cssText = 'position:absolute;top:0;left:0;right:0;height:3px;background:'+col+';border-radius:10px 10px 0 0';
+      card.prepend(bar);
+    }
+  });
+});
+
+
+// ═══ RPP MODULE — all globals scoped inside ════════════════
+(function() {
+
+
+// ─────────────────────────────────────────────────────────────
+// PAGE SWITCHING
+// ─────────────────────────────────────────────────────────────
+function showPage_inner(id, btn) /* unused */ {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'graph') { setTimeout(initGraph, 50); }
+}
+
+const NODES = [
+  // ── Companies ──────────────────────────────────────────────
+  {
+    id:'compA', type:'company', label:'Company A',
+    sub:'Has account with Bank',
+    bankCustomer:true, x:0, y:0,
+    detail:{
+      title:'Company A', typeLabel:'Bank Customer', typeColor:'#0ea5e9',
+      bankRelation:'Active business account holder — subject to full CDD and ongoing monitoring.',
+      riskLevel:'med', edd:false,
+      description:'Company A is the bank\'s direct customer. CDD was completed at onboarding — directors, UBOs and PSCs verified and screened. MLR reg.28(11) requires keeping this information current. The bank must detect any post-onboarding changes to directors, UBOs or the ownership structure.',
+      regs:[
+        {code:'MLR reg.28',type:'mlr',note:'Standard CDD at onboarding and ongoing'},
+        {code:'MLR reg.28(11)',type:'mlr',note:'Ongoing monitoring — CDD must be kept up to date'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Identify and verify all UBOs and control structure'},
+        {code:'FCA FCG (Nov 2024)',type:'fca',note:'Connected parties screening obligation'},
+      ],
+      actions:'CDD complete. Periodic refresh required. Companies House API monitoring should be active. Any director/UBO change triggers re-screening.'
+    }
+  },
+  {
+    id:'compB', type:'company', label:'Company B',
+    sub:'Owns 51% of Company A',
+    bankCustomer:false, x:220, y:-180,
+    detail:{
+      title:'Company B', typeLabel:'Related Entity — UBO chain', typeColor:'#a78bfa',
+      bankRelation:'Not a bank customer. Controls Company A through 51% ownership — must be identified and traced.',
+      riskLevel:'med', edd:false,
+      description:'Company B owns 51% of Company A, making it a PSC and beneficial owner under MLR 2017 reg.5. The bank must identify Company B and trace through it to the ultimate natural persons. Company B\'s directors are related parties of Company A.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'Definition of beneficial owner — 25%+ threshold'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Bank must understand ownership/control of legal persons'},
+        {code:'JMLSG Part I Ch.5.4',type:'jmlsg',note:'Corporate entity CDD — tracing through ownership layers'},
+      ],
+      actions:'Trace through Company B to identify ultimate natural persons. All directors must be screened. Changes to Company B\'s structure require re-assessment.'
+    }
+  },
+  {
+    id:'compC', type:'company', label:'Company C',
+    sub:'Owns 51% of Company B',
+    bankCustomer:false, x:220, y:190,
+    detail:{
+      title:'Company C', typeLabel:'Related Entity — Ultimate parent', typeColor:'#a78bfa',
+      bankRelation:'Not a bank customer. Ultimate parent — owns 51% of Company B which owns 51% of Company A.',
+      riskLevel:'high', edd:true,
+      description:'Company C controls Company A through a two-layer structure (C→B→A). Layered corporate structures are themselves an EDD trigger. A sanctioned individual (Person 10) is connected to Company C — this creates a critical compliance issue for the bank\'s relationship with Company A.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'UBO: 25%+ threshold — C controls A via intermediary'},
+        {code:'MLR reg.33',type:'mlr',note:'Complex/opaque structure — mandatory EDD trigger'},
+        {code:'JMLSG Part I Ch.5.4',type:'jmlsg',note:'Multi-layer ownership: must trace to natural persons'},
+        {code:'FCA FCG (Nov 2024)',type:'fca',note:'Sanctioned person connected to this entity'},
+      ],
+      actions:'EDD mandatory. Full UBO chain must be mapped. All directors and UBOs of Company C must be identified and screened. Sanctions connection requires MLRO assessment and potential SAR.'
+    }
+  },
+
+  // ── People — Company A ──────────────────────────────────────
+  {
+    id:'p1', type:'person-known', label:'Person 1',
+    sub:'Known — personal acct, not director', x:-230, y:-140,
+    detail:{
+      title:'Person 1', typeLabel:'Known to bank — not a director', typeColor:'#22c55e',
+      bankRelation:'Has a personal account. Not a director or UBO of Company A.',
+      riskLevel:'low', edd:false,
+      description:'Already known and verified through personal account CDD. Not a director or PSC of Company A — no additional obligation via the company relationship. Monitor for role changes.',
+      regs:[{code:'MLR reg.28',type:'mlr',note:'Already subject to CDD via personal account'}],
+      actions:'No additional action required. Monitor for any change in role (e.g. becoming a director or acquiring shares).'
+    }
+  },
+  {
+    id:'p2', type:'person-known', label:'Person 2',
+    sub:'Known — personal acct, not director', x:-230, y:60,
+    detail:{
+      title:'Person 2', typeLabel:'Known to bank — not a director', typeColor:'#22c55e',
+      bankRelation:'Has a personal account. Not a director or UBO of Company A.',
+      riskLevel:'low', edd:false,
+      description:'CDD already performed via personal account. Not a director or PSC — no additional obligations via the corporate relationship.',
+      regs:[{code:'MLR reg.28',type:'mlr',note:'CDD already performed via personal account'}],
+      actions:'No additional action required. Monitor for role change.'
+    }
+  },
+  {
+    id:'p3', type:'person-known', label:'Person 3',
+    sub:'Known — Director of Company A', x:-230, y:190,
+    detail:{
+      title:'Person 3', typeLabel:'Known to bank — Director', typeColor:'#22c55e',
+      bankRelation:'Has an account with the bank. Director of Company A.',
+      riskLevel:'low', edd:false,
+      description:'Known through personal account. Also a director of Company A — must be screened specifically in that capacity. PEP status, sanctions, adverse media, and connections to high-risk entities must all be assessed.',
+      regs:[
+        {code:'MLR reg.28(3)',type:'mlr',note:'Directors must be identified and screened as part of CDD'},
+        {code:'MLR reg.28(11)',type:'mlr',note:'Ongoing: monitor for PEP designation, adverse media'},
+        {code:'JMLSG Part I Ch.5',type:'jmlsg',note:'CDD covers all persons who exercise control'},
+      ],
+      actions:'Screen in director capacity. Link to Company A CDD record. Ongoing monitoring for PEP designation, sanctions, adverse media.'
+    }
+  },
+  {
+    id:'p4', type:'person-unknown', label:'Person 4',
+    sub:'Unknown — Director of Company A', x:-90, y:-260,
+    detail:{
+      title:'Person 4', typeLabel:'Unknown to bank — Director', typeColor:'#f97316',
+      bankRelation:'No existing relationship with the bank. Director of Company A — full CDD required.',
+      riskLevel:'med', edd:false,
+      description:'Director of Company A with no existing bank relationship. Full CDD required: identity verification, address, PEP and sanctions screening. If recently appointed without bank notification — compliance gap exists until screened.',
+      regs:[
+        {code:'MLR reg.28(3)',type:'mlr',note:'All directors must be identified and verified'},
+        {code:'MLR reg.28(11)',type:'mlr',note:'Ongoing monitoring must detect post-onboarding changes'},
+        {code:'FCA FCG (Nov 2024)',type:'fca',note:'Connected parties — must be screened for sanctions'},
+      ],
+      actions:'Full identity verification required. PEP/sanctions screening mandatory. If appointed post-onboarding without notification — Companies House monitoring should have triggered an event-driven review.'
+    }
+  },
+
+  // ── People — Company B ──────────────────────────────────────
+  {
+    id:'p5', type:'person-unknown', label:'Person 5',
+    sub:'Unknown — Director of Company B', x:430, y:-270,
+    detail:{
+      title:'Person 5', typeLabel:'Unknown — Director of parent', typeColor:'#f97316',
+      bankRelation:'No account with bank. Director of Company B (which owns 51% of Company A).',
+      riskLevel:'med', edd:false,
+      description:'Directs Company B which controls Company A. Must be identified and screened as indirect controller. Adverse media or PEP designation could trigger EDD for Company A.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'Indirect control through Company B'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Full ownership/control structure including indirect layers'},
+        {code:'FCA FCG (Nov 2024)',type:'fca',note:'Connected parties screening must cover indirect controllers'},
+      ],
+      actions:'Identify and screen. PEP/sanctions check required. Any adverse finding triggers EDD review for Company A.'
+    }
+  },
+  {
+    id:'p6', type:'person-unknown', label:'Person 6',
+    sub:'Unknown — Director of Company B', x:450, y:-80,
+    detail:{
+      title:'Person 6', typeLabel:'Unknown — Director of parent', typeColor:'#f97316',
+      bankRelation:'No account with bank. Director of Company B.',
+      riskLevel:'med', edd:false,
+      description:'Second director of Company B. Same obligations as Person 5 — must be identified and screened as part of CDD for Company A.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'Indirect control — Company B level'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Full control structure must be understood'},
+        {code:'JMLSG Part I Ch.5.4',type:'jmlsg',note:'Corporate CDD: identify directors at each layer'},
+      ],
+      actions:'Identify and screen. Monitor for post-onboarding changes to Company B directorship.'
+    }
+  },
+  {
+    id:'p7', type:'person-unknown', label:'Person 7',
+    sub:'Unknown — connected to Company B', x:450, y:100,
+    detail:{
+      title:'Person 7', typeLabel:'Unknown — Shareholder', typeColor:'#f97316',
+      bankRelation:'No account with bank. Connected to Company B — shareholding determines obligation.',
+      riskLevel:'low', edd:false,
+      description:'Connected to Company B but not a director. If they hold 25%+ of Company B they are a beneficial owner and require full CDD. Below that threshold, risk-based approach applies.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'25% threshold for beneficial owner status'},
+        {code:'JMLSG Part I Ch.5.4',type:'jmlsg',note:'Risk-based approach to sub-threshold shareholders'},
+      ],
+      actions:'Assess shareholding. If 25%+: full identity verification and screening required. High-risk sectors warrant screening regardless of threshold.'
+    }
+  },
+
+  // ── People — Company C ──────────────────────────────────────
+  {
+    id:'p8', type:'person-unknown', label:'Person 8',
+    sub:'Unknown — connected to Company C', x:150, y:360,
+    detail:{
+      title:'Person 8', typeLabel:'Unknown — Ultimate parent connection', typeColor:'#f97316',
+      bankRelation:'No account. Connected to Company C (ultimate parent). Must be identified in UBO tracing.',
+      riskLevel:'med', edd:false,
+      description:'Connected to Company C which sits at the apex of the ownership chain. All natural persons who ultimately own or control Company C must be identified — these are UBOs of Company A.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'UBO at apex of ownership chain'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Full chain traced to natural persons'},
+        {code:'JMLSG Part I Ch.5.4',type:'jmlsg',note:'Each layer of ownership must be documented'},
+      ],
+      actions:'Full identity verification and screening required. Document role in Company C structure. Ongoing monitoring for sanctions list changes.'
+    }
+  },
+  {
+    id:'p9', type:'person-unknown', label:'Person 9',
+    sub:'Unknown — connected to Company C', x:380, y:340,
+    detail:{
+      title:'Person 9', typeLabel:'Unknown — Ultimate parent connection', typeColor:'#f97316',
+      bankRelation:'No account. Connected to Company C.',
+      riskLevel:'med', edd:false,
+      description:'Connected to Company C. Nature of connection (director, shareholder, UBO) must be established to determine CDD obligation. Must be screened for PEP/sanctions as part of full UBO tracing.',
+      regs:[
+        {code:'MLR reg.5',type:'mlr',note:'UBO identification — full chain to natural persons'},
+        {code:'MLR reg.28(3)',type:'mlr',note:'Control structure mapping'},
+      ],
+      actions:'Identify connection type and shareholding. Perform identity verification and PEP/sanctions screening.'
+    }
+  },
+  {
+    id:'p10', type:'person-sanctions', label:'Person 10',
+    sub:'ON SANCTIONS LIST — Company C connection', x:490, y:270,
+    detail:{
+      title:'Person 10 — SANCTIONS MATCH',
+      typeLabel:'SANCTIONS / HIGH RISK', typeColor:'#ef4444',
+      bankRelation:'No account. Connected to Company C. Appears on UK/international sanctions list.',
+      riskLevel:'high', edd:true,
+      description:'On the UK consolidated sanctions list and/or OFAC/UN/EU lists. Their connection to Company C — which controls Company A through the chain — means the bank\'s account with Company A may be linked to a sanctioned individual. FCA FCG (Nov 2024) explicitly requires this to be detected. Failure was central to the Starling Bank £29m fine (2024).',
+      regs:[
+        {code:'MLR reg.33',type:'mlr',note:'MANDATORY EDD — sanctions connection triggers reg.33'},
+        {code:'FCA FCG (Nov 2024)',type:'fca',note:'Connected parties sanctions screening — explicit obligation'},
+        {code:'POCA 2002 s.330',type:'poca',note:'Knowledge/suspicion of money laundering — SAR obligation'},
+        {code:'MLR reg.28(11)',type:'mlr',note:'Ongoing monitoring should detect this'},
+        {code:'JMLSG Part I Ch.5',type:'jmlsg',note:'Adverse screening hit must be documented'},
+      ],
+      actions:'🚨 IMMEDIATE: (1) Suspend new transactions pending investigation. (2) Full EDD — trace the sanctions connection through C→B→A. (3) MLRO to assess SAR obligation under POCA 2002. (4) Consider DAML before further transactions. (5) Senior management written approval required. (6) Document all steps with full rationale.'
+    }
+  },
+];
+
+// Edge riskLevel determines colour:
+//   'safe'    → green  — bank already knows both parties
+//   'cdd'     → blue   — standard CDD applies
+//   'unknown' → amber  — unknown party, CDD needed
+//   'edd'     → red    — EDD mandatory / high risk
+const EDGES = [
+  // Ownership chain — complex structure → EDD risk
+  { from:'compC', to:'compB', type:'ownership', label:'Owns 51%', risk:'edd' },
+  { from:'compB', to:'compA', type:'ownership', label:'Owns 51%', risk:'edd' },
+  // Company A — known persons → safe/standard
+  { from:'compA', to:'p1', type:'related', label:'Related', risk:'safe' },
+  { from:'compA', to:'p2', type:'related', label:'Related', risk:'safe' },
+  { from:'compA', to:'p3', type:'director', label:'Director', risk:'safe' },
+  // Company A — unknown director → CDD required
+  { from:'compA', to:'p4', type:'director', label:'Director', risk:'unknown' },
+  // Company B — unknown directors → CDD/EDD
+  { from:'compB', to:'p5', type:'director', label:'Director', risk:'unknown' },
+  { from:'compB', to:'p6', type:'director', label:'Director', risk:'unknown' },
+  { from:'compB', to:'p7', type:'related', label:'Related', risk:'unknown' },
+  // Company C — unknown connections → EDD (because C is sanctioned-linked)
+  { from:'compC', to:'p8', type:'related', label:'Related', risk:'edd' },
+  { from:'compC', to:'p9', type:'related', label:'Related', risk:'edd' },
+  // Sanctions connection — bright red, always EDD
+  { from:'compC', to:'p10', type:'related', label:'SANCTIONS LINK', risk:'edd' },
+];
+
+// ─────────────────────────────────────────────────────────────
+// EDGE COLOUR SCHEME
+// ─────────────────────────────────────────────────────────────
+const EDGE_COLORS = {
+  safe:    { stroke:'#22c55e', glow:'#22c55e', dash:[],    width:1.8, label:'Standard CDD (known)' },
+  cdd:     { stroke:'#0ea5e9', glow:'#0ea5e9', dash:[],    width:1.8, label:'Standard CDD' },
+  unknown: { stroke:'#f59e0b', glow:'#f59e0b', dash:[6,4], width:1.8, label:'CDD required — unknown party' },
+  edd:     { stroke:'#ef4444', glow:'#ef4444', dash:[],    width:2.4, label:'EDD mandatory / high risk' },
+  ownership:{ stroke:'#a78bfa',glow:'#a78bfa', dash:[],    width:2.4, label:'Ownership' },
+};
+
+// ─────────────────────────────────────────────────────────────
+// GRAPH ENGINE
+// ─────────────────────────────────────────────────────────────
+let canvas, ctx, W, H;
+let transform = { x: 0, y: 0, scale: 1 };
+let dragging = false, lastMouse = null;
+let hoveredNode = null, selectedNode = null;
+let graphInited = false;
+let pulse = 0; // 0→1 animation ticker
+
+const nodePos = {};
+
+function initGraph() {
+  if (graphInited) { scheduleDraw(); return; }
+  canvas = document.getElementById('graph-canvas');
+  ctx = canvas.getContext('2d');
+  resize();
+  window.addEventListener('resize', resize);
+
+  NODES.forEach(n => { nodePos[n.id] = { x: n.x, y: n.y }; });
+
+  // Auto-fit: compute bounding box and centre + scale to fit
+  const xs = NODES.map(n=>n.x), ys = NODES.map(n=>n.y);
+  const minX=Math.min(...xs)-80, maxX=Math.max(...xs)+80;
+  const minY=Math.min(...ys)-60, maxY=Math.max(...ys)+60;
+  const bw = maxX-minX, bh = maxY-minY;
+  const scaleX = (W-340) / bw, scaleY = (H-60) / bh; // 340px for info panel
+  const sc = Math.min(scaleX, scaleY, 1.2);
+  transform.scale = sc;
+  transform.x = (W - 320) / 2 - ((minX+maxX)/2)*sc; // shift left of panel
+  transform.y = H/2 - ((minY+maxY)/2)*sc;
+
+  canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseup', () => { dragging = false; });
+  canvas.addEventListener('mouseleave', () => { dragging = false; hoveredNode = null; });
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  canvas.addEventListener('click', onClick);
+
+  graphInited = true;
+  animLoop();
+}
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = rect.width;
+  H = canvas.height = rect.height;
+}
+
+let rafId = null;
+function animLoop() {
+  pulse = (pulse + 0.018) % (Math.PI * 2);
+  draw();
+  rafId = requestAnimationFrame(animLoop);
+}
+function scheduleDraw() { if (!rafId) animLoop(); }
+
+function worldToScreen(x,y) {
+  return { x: x*transform.scale+transform.x, y: y*transform.scale+transform.y };
+}
+function screenToWorld(sx,sy) {
+  return { x:(sx-transform.x)/transform.scale, y:(sy-transform.y)/transform.scale };
+}
+
+function nodeHitTest(n, wx, wy) {
+  const pos = nodePos[n.id];
+  if (n.type === 'company') {
+    const hw=72, hh=34;
+    return wx>=pos.x-hw && wx<=pos.x+hw && wy>=pos.y-hh && wy<=pos.y+hh;
+  }
+  const dx=wx-pos.x, dy=wy-pos.y;
+  return Math.sqrt(dx*dx+dy*dy) <= 18;
+}
+
+function nodeColor(n) {
+  switch(n.type) {
+    case 'company': return '#a78bfa';
+    case 'person-known': return '#22c55e';
+    case 'person-unknown': return '#f97316';
+    case 'person-sanctions': return '#ef4444';
+  }
+}
+
+// ─── DRAW ─────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  // Subtle grid
+  ctx.save();
+  ctx.strokeStyle='#ffffff06';
+  ctx.lineWidth=1;
+  const gs=40*transform.scale;
+  const ox=transform.x%gs, oy=transform.y%gs;
+  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(transform.x, transform.y);
+  ctx.scale(transform.scale, transform.scale);
+
+  EDGES.forEach(e => drawEdge(e));
+  NODES.forEach(n => drawNode(n));
+
+  ctx.restore();
+}
+
+function getEdgeStyle(e) {
+  if (e.type === 'ownership') return EDGE_COLORS.ownership;
+  return EDGE_COLORS[e.risk] || EDGE_COLORS.cdd;
+}
+
+function drawEdge(e) {
+  const a = nodePos[e.from], b = nodePos[e.to];
+  if (!a||!b) return;
+
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const ux=dx/dist, uy=dy/dist;
+
+  const fromN=NODES.find(n=>n.id===e.from);
+  const toN=NODES.find(n=>n.id===e.to);
+  let sx=a.x, sy=a.y, ex=b.x, ey=b.y;
+
+  if(fromN.type==='company'){sx=a.x+ux*74;sy=a.y+uy*36;}
+  else{sx=a.x+ux*17;sy=a.y+uy*17;}
+  if(toN.type==='company'){ex=b.x-ux*74;ey=b.y-uy*36;}
+  else{ex=b.x-ux*17;ey=b.y-uy*17;}
+
+  const style = getEdgeStyle(e);
+  const isSelected = selectedNode && (selectedNode.id===e.from||selectedNode.id===e.to);
+  const isHovered = hoveredNode && (hoveredNode.id===e.from||hoveredNode.id===e.to);
+
+  // Pulse factor: all edges pulse, EDD/sanctions pulse more intensely
+  const pulseMag = e.risk==='edd' ? 0.55 : (e.risk==='unknown' ? 0.30 : 0.18);
+  const pulseAlpha = 0.55 + Math.sin(pulse)*pulseMag;
+  let alpha = isSelected ? 1.0 : isHovered ? 0.9 : pulseAlpha;
+
+  ctx.save();
+
+  // Glow pass for EDD/sanctions edges
+  if (e.risk==='edd' || e.type==='ownership') {
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.strokeStyle = style.glow;
+    ctx.lineWidth = (style.width + 6);
+    ctx.shadowColor = style.glow;
+    ctx.shadowBlur = 14;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(sx,sy);
+    ctx.lineTo(ex,ey);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Main line
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = isSelected ? style.width+1 : style.width;
+  ctx.setLineDash(style.dash || []);
+  ctx.shadowColor = style.glow;
+  ctx.shadowBlur = e.risk==='edd' ? 8 : 3;
+  ctx.beginPath();
+  ctx.moveTo(sx,sy);
+  ctx.lineTo(ex,ey);
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.setLineDash([]);
+
+  // Arrowhead
+  ctx.fillStyle = style.stroke;
+  ctx.globalAlpha = alpha;
+  const ax=ex-ux*10, ay=ey-uy*10;
+  const px=-uy, py=ux;
+  ctx.beginPath();
+  ctx.moveTo(ex,ey);
+  ctx.lineTo(ax+px*5,ay+py*5);
+  ctx.lineTo(ax-px*5,ay-py*5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Always-visible edge label — small pill along the line
+  const mx=(sx+ex)/2, my=(sy+ey)/2;
+  ctx.setLineDash([]);
+  const labelText = e.label;
+  ctx.font = '500 8px Inter, sans-serif';
+  const tw = ctx.measureText(labelText).width;
+  const padX=5, padY=3, rx=3;
+  const lx=mx-tw/2-padX, ly=my-6-padY;
+  const lw=tw+padX*2, lh=12+padY*2;
+
+  // Pill background
+  ctx.globalAlpha = isSelected ? 0.95 : 0.78;
+  ctx.fillStyle = '#0d1421';
+  roundRectPath(ctx,lx,ly,lw,lh,rx);
+  ctx.fill();
+  // Pill border in edge colour
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = 0.8;
+  ctx.globalAlpha = alpha * 0.7;
+  roundRectPath(ctx,lx,ly,lw,lh,rx);
+  ctx.stroke();
+  // Label text
+  ctx.globalAlpha = isSelected ? 1.0 : 0.9;
+  ctx.fillStyle = style.stroke;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(labelText, mx, my-1);
+
+  ctx.restore();
+}
+
+function drawNode(n) {
+  const pos = nodePos[n.id];
+  const isSelected = selectedNode && selectedNode.id===n.id;
+  const isHovered = hoveredNode && hoveredNode.id===n.id;
+  const col = nodeColor(n);
+
+  // Node pulse — sanctions pulses red hard
+  const isSanctions = n.type==='person-sanctions';
+  const pulseMag = isSanctions ? 0.6 : 0.2;
+  const nodePulse = 0.8 + Math.sin(pulse + (n.id.charCodeAt(0)*0.7)) * pulseMag;
+
+  ctx.save();
+
+  if (n.type === 'company') {
+    const hw=70, hh=32;
+
+    // Outer glow
+    ctx.shadowColor = col;
+    ctx.shadowBlur = isSelected ? 22 : (isHovered ? 12 : 6*nodePulse);
+
+    // Main rect
+    ctx.fillStyle = isSelected ? '#1e1a35' : '#110d26';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = isSelected ? 2.5 : 1.5;
+    ctx.globalAlpha = 1;
+    roundRectPath(ctx, pos.x-hw, pos.y-hh, hw*2, hh*2, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur=0;
+
+    // Bank customer header stripe
+    if (n.bankCustomer) {
+      ctx.fillStyle='#0ea5e9';
+      ctx.globalAlpha=0.9;
+      roundRectPath(ctx, pos.x-hw, pos.y-hh, hw*2, 10, {tl:10,tr:10,bl:0,br:0});
+      ctx.fill();
+      ctx.font='600 7px Inter,sans-serif';
+      ctx.fillStyle='#ffffff';
+      ctx.globalAlpha=1;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText('BANK CUSTOMER', pos.x, pos.y-hh+5);
+    }
+
+    ctx.globalAlpha=1;
+    // Company name — bold, fits in box
+    const nameY = n.bankCustomer ? pos.y-6 : pos.y-8;
+    ctx.font='700 12px Inter,sans-serif';
+    ctx.fillStyle='#e2e8f4';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(n.label, pos.x, nameY);
+
+    // Sub label — wrapped to fit, max width = hw*2-12
+    ctx.font='400 8.5px Inter,sans-serif';
+    ctx.fillStyle='#7a90b4';
+    const maxW = hw*2 - 14;
+    wrapText(ctx, n.sub, pos.x, nameY+14, maxW, 11);
+
+  } else {
+    const r=15;
+    const glowIntensity = isSanctions ? 20*nodePulse : (isSelected ? 18 : 6);
+
+    // Outer ring pulse
+    ctx.beginPath();
+    ctx.arc(pos.x,pos.y, r+4+Math.sin(pulse)*3, 0, Math.PI*2);
+    ctx.fillStyle=col+'20';
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor=col;
+    ctx.shadowBlur=glowIntensity;
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(pos.x,pos.y,r,0,Math.PI*2);
+    ctx.fillStyle='#0a0e17';
+    ctx.fill();
+    ctx.strokeStyle=col;
+    ctx.lineWidth=isSelected ? 2.5 : 1.8;
+    ctx.stroke();
+    ctx.shadowBlur=0;
+
+    // Inner dot / icon
+    ctx.fillStyle=col;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    if(isSanctions){
+      ctx.font='bold 12px Inter';
+      ctx.fillText('⚠',pos.x,pos.y+1);
+    } else {
+      ctx.beginPath();
+      ctx.arc(pos.x,pos.y,4,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    // Name label below
+    ctx.shadowBlur=0;
+    ctx.font=`${isSelected?'600':'500'} 9.5px Inter,sans-serif`;
+    ctx.fillStyle=isSelected?'#e2e8f4':'#94a3b8';
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+    ctx.fillText(n.label.replace('⚠ ',''),pos.x,pos.y+r+4);
+  }
+
+  ctx.restore();
+}
+
+// Wrap text helper — draws lines that fit within maxWidth
+function wrapText(ctx, text, cx, y, maxWidth, lineH) {
+  const words = text.split(' ');
+  let line = '';
+  let lineY = y;
+  for(let i=0;i<words.length;i++){
+    const test = line ? line+' '+words[i] : words[i];
+    if(ctx.measureText(test).width > maxWidth && line){
+      ctx.fillText(line, cx, lineY);
+      line = words[i];
+      lineY += lineH;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line, cx, lineY);
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  if (typeof r === 'number') r={tl:r,tr:r,br:r,bl:r};
+  ctx.beginPath();
+  ctx.moveTo(x+r.tl, y);
+  ctx.lineTo(x+w-r.tr, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r.tr);
+  ctx.lineTo(x+w, y+h-r.br); ctx.quadraticCurveTo(x+w, y+h, x+w-r.br, y+h);
+  ctx.lineTo(x+r.bl, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r.bl);
+  ctx.lineTo(x, y+r.tl); ctx.quadraticCurveTo(x, y, x+r.tl, y);
+  ctx.closePath();
+}
+
+// ─── INTERACTION ──────────────────────────────────────────────
+function getNodeAt(sx,sy) {
+  const w=screenToWorld(sx,sy);
+  for(let i=NODES.length-1;i>=0;i--){
+    if(nodeHitTest(NODES[i],w.x,w.y)) return NODES[i];
+  }
+  return null;
+}
+
+function onMouseDown(e){
+  dragging=true;
+  lastMouse={x:e.clientX,y:e.clientY};
+}
+
+function onMouseMove(e){
+  const rect=canvas.getBoundingClientRect();
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
+  const node=getNodeAt(sx,sy);
+  const tip=document.getElementById('tooltip');
+  if(node){
+    canvas.style.cursor='pointer';
+    tip.style.display='block';
+    tip.style.left=(sx+16)+'px';
+    tip.style.top=(sy-10)+'px';
+    tip.textContent=node.sub;
+    hoveredNode=node;
+  } else {
+    canvas.style.cursor=dragging?'grabbing':'grab';
+    tip.style.display='none';
+    hoveredNode=null;
+  }
+  if(dragging&&lastMouse){
+    transform.x+=e.clientX-lastMouse.x;
+    transform.y+=e.clientY-lastMouse.y;
+    lastMouse={x:e.clientX,y:e.clientY};
+  }
+}
+
+function onWheel(e){
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
+  const f=e.deltaY<0?1.1:0.91;
+  transform.x=sx+(transform.x-sx)*f;
+  transform.y=sy+(transform.y-sy)*f;
+  transform.scale*=f;
+  transform.scale=Math.max(0.25,Math.min(4,transform.scale));
+}
+
+function onClick(e){
+  if(dragging&&lastMouse&&(Math.abs(e.clientX-lastMouse.x)>4||Math.abs(e.clientY-lastMouse.y)>4))return;
+  const rect=canvas.getBoundingClientRect();
+  const node=getNodeAt(e.clientX-rect.left,e.clientY-rect.top);
+  selectedNode = (node && selectedNode?.id===node.id) ? null : node;
+  updateInfoPanel(selectedNode);
+}
+
+function zoomBy(factor){
+  const cx=W/2,cy=H/2;
+  transform.x=cx+(transform.x-cx)*factor;
+  transform.y=cy+(transform.y-cy)*factor;
+  transform.scale*=factor;
+  transform.scale=Math.max(0.25,Math.min(4,transform.scale));
+}
+
+function resetZoom(){
+  const xs=NODES.map(n=>n.x),ys=NODES.map(n=>n.y);
+  const minX=Math.min(...xs)-80,maxX=Math.max(...xs)+80;
+  const minY=Math.min(...ys)-60,maxY=Math.max(...ys)+60;
+  const bw=maxX-minX,bh=maxY-minY;
+  const scaleX=(W-340)/bw,scaleY=(H-60)/bh;
+  const sc=Math.min(scaleX,scaleY,1.2);
+  transform.scale=sc;
+  transform.x=(W-320)/2-((minX+maxX)/2)*sc;
+  transform.y=H/2-((minY+maxY)/2)*sc;
+}
+
+// ─── INFO PANEL ───────────────────────────────────────────────
+function updateInfoPanel(node){
+  const panel=document.getElementById('info-panel');
+  const content=document.getElementById('info-content');
+  if(!node){
+    panel.classList.add('empty');
+    content.innerHTML=`<div class="info-empty-msg">Click any node to see regulatory detail<div class="hint">← drag to pan · scroll to zoom</div></div>`;
+    return;
+  }
+  panel.classList.remove('empty');
+  const d=node.detail;
+  const riskLabels={high:'HIGH RISK',med:'MEDIUM',low:'LOW RISK',none:'N/A'};
+  const riskIcons={high:'⚠',med:'◆',low:'✓',none:'—'};
+  const regListHtml=d.regs.map(r=>
+    `<div style="margin-bottom:6px"><span class="reg-tag ${r.type}" style="margin-right:6px">${r.code}</span><span style="font-size:11px;color:#7a90b4">${r.note}</span></div>`
+  ).join('');
+  content.innerHTML=`
+    <div class="info-header">
+      <div class="info-type-dot" style="background:${d.typeColor}"></div>
+      <div class="info-title">${d.title}</div>
+      <div class="info-type-label" style="background:${d.typeColor}20;color:${d.typeColor};border:1px solid ${d.typeColor}40">${d.typeLabel.split('—')[0].trim()}</div>
+    </div>
+    <div class="info-body">
+      <div class="info-row">
+        <div class="info-row-label">Bank relationship</div>
+        <div class="info-row-val">${d.bankRelation}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-row-label">Risk level</div>
+        <div class="risk-pill ${d.riskLevel}">${riskIcons[d.riskLevel]} ${riskLabels[d.riskLevel]}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-row-label">EDD required?</div>
+        <div class="info-row-val" style="color:${d.edd?'#ef4444':'#22c55e'};font-weight:600">
+          ${d.edd?'⚠ YES — EDD mandatory':'✓ Standard CDD applies'}
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-row-label">Description</div>
+        <div class="info-row-val" style="color:#94a3b8">${d.description}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-row-label">Regulations / obligations</div>
+        <div>${regListHtml}</div>
+      </div>
+      <div class="info-row" style="background:#0a1a2a;border:1px solid #1a3a5a;border-radius:8px;padding:10px">
+        <div class="info-row-label" style="color:#60a5fa;margin-bottom:4px">Required actions</div>
+        <div class="info-row-val" style="font-size:11px;color:#90b4d4">${d.actions}</div>
+      </div>
+    </div>`;
+}
+
+
+
+// Expose wrappers
+window.rTab = function(id, btn) {
+  document.querySelectorAll('#sec-rpp .page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sec-rpp .nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'graph') setTimeout(initGraph, 50);
+};
+window.rZoom = function(f) { if(typeof zoomBy==='function') zoomBy(f); };
+window.rReset = function() { if(typeof resetZoom==='function') resetZoom(); };
+
+})();
+
+
+
+// ═══ ARCH MODULE — all globals scoped inside ═══════════════
+(function() {
+
+// Data (no DOM access)
+
+// ═══════════════════════════════════════════════════════════════
+// ARCHITECTURE DATA
+// ═══════════════════════════════════════════════════════════════
+
+const NODES = [
+
+  // ── TRIGGER LAYER (left) ─────────────────────────────────
+  {
+    id:'ch_webhook', layer:'trigger', label:'Companies House', sub:'Filing Monitor',
+    x:-560, y:-20, icon:'🏛',
+    detail:{
+      eyebrow:'Event Source — External',
+      title:'Companies House API Webhook',
+      sub:'Real-time filing event stream — director appointments, PSC changes, address updates',
+      status:'active',
+      desc:'The Companies House API streams filing events in near-real-time. When any company in the bank\'s monitored portfolio files a change — director appointment, resignation, PSC update, or registered address change — a webhook event fires and triggers the pipeline. <strong>Without this integration, banks rely solely on periodic refresh and customer self-disclosure.</strong>',
+      inputs:[],
+      outputs:[
+        'Filing event payload: company number, event type, date, changed fields',
+        'New director name, DOB, nationality, address (from CH XML filing)',
+        'PSC changes: new/removed persons of significant control',
+        'Company status changes: dissolution, administration, striking off',
+      ],
+      regs:['MLR reg.28(11)','FCA FCG (Nov 2024)'],
+      regType:['cyan','cyan'],
+      note:'The FCA 2025 review found most banks lacked systematic event-driven triggers. Companies House API monitoring is the primary mitigation for the related party gap.'
+    }
+  },
+  {
+    id:'ch_api', layer:'external', label:'Companies House', sub:'Data API',
+    x:-560, y:160, icon:'📋',
+    detail:{
+      eyebrow:'External API — Gov.uk',
+      title:'Companies House Data API',
+      sub:'PSC register, director history, filing history, group structure',
+      status:'active',
+      desc:'The Companies House REST API provides structured data on any UK-registered company: current directors, persons of significant control, shareholding structure, and full filing history. The Corporate Registry Agent calls this API to fetch the complete updated officer list and any group structure filings after a webhook trigger.',
+      inputs:['Company registration number from trigger event'],
+      outputs:[
+        'Full current director list (names, DOBs, nationalities, appointments)',
+        'PSC register — all persons with 25%+ control',
+        'Group structure if filed under ECCTA 2023 identity verification',
+        'Previous directors (for historical risk assessment)',
+        'Related entities: subsidiary / parent relationships',
+      ],
+      regs:['MLR reg.28(3)','ECCTA 2023','JMLSG Part I Ch.5.4'],
+      regType:['emerald','emerald','emerald'],
+      note:'The Economic Crime and Corporate Transparency Act 2023 introduced identity verification at Companies House — improving data quality from 2024 onwards.'
+    }
+  },
+  {
+    id:'tm_alert', layer:'aml', label:'Transaction Monitor', sub:'Anomaly Alert',
+    x:-560, y:-200, icon:'📊',
+    detail:{
+      eyebrow:'AML System — Internal',
+      title:'Transaction Monitoring System',
+      sub:'Triggered alerts that prompt re-screening of existing customers',
+      status:'active',
+      desc:'The bank\'s existing transaction monitoring system can also trigger the related party pipeline when it detects patterns inconsistent with the customer\'s declared profile — for example, payments to jurisdictions not expected from the company\'s stated business activity, structuring patterns, or unusually large volumes. These alerts initiate a risk re-assessment that includes re-screening all related parties.',
+      inputs:['Existing customer transaction data','Calibrated threshold rules per customer risk profile'],
+      outputs:[
+        'Alert payload: customer ID, alert type, triggering transaction details',
+        'Risk score delta — new vs baseline expected behaviour',
+        'Suggested investigation category (sanctions, PEP, structuring, etc.)',
+      ],
+      regs:['MLR reg.28(11)','FCA FCG Ch.6','JMLSG Part I Ch.6'],
+      regType:['rose','rose','rose'],
+      note:'FCA FCG requires monitoring to be calibrated to the customer\'s declared activity and risk profile — not generic threshold rules. Generic thresholds are a common FCA poor-practice finding.'
+    }
+  },
+
+  // ── ORCHESTRATOR (centre top) ─────────────────────────────
+  {
+    id:'orchestrator', layer:'orchestrator', label:'KYC Orchestrator', sub:'Master Agent',
+    x:0, y:0, icon:'⬡',
+    detail:{
+      eyebrow:'AI Agent — Orchestrator Layer',
+      title:'KYC Orchestrator Agent',
+      sub:'Manages end-to-end workflow, routes sub-agents, maintains state, determines escalation path',
+      status:'active',
+      desc:'The orchestrator is the central intelligence of the pipeline. It receives the trigger event, determines which sub-agents to invoke and in what order, aggregates their outputs, applies the bank\'s risk policy rules, and determines the final routing decision: auto-resolve, CDD refresh, EDD trigger, or human escalation. It also generates the compliance narrative using an LLM, ensuring the FCA\'s documented-rationale requirement is always met.',
+      inputs:[
+        'Trigger payload (webhook, TM alert, or periodic schedule)',
+        'Customer risk profile from internal systems',
+        'Bank\'s documented EDD trigger policy',
+        'Previous CDD/EDD records from case management',
+      ],
+      outputs:[
+        'Sub-agent task assignments with priorities',
+        'Aggregated risk assessment combining all sub-agent findings',
+        'Routing decision: auto-resolve / CDD refresh / EDD / MLRO escalation',
+        'LLM-generated compliance narrative (FCA documented rationale)',
+        'Case file pre-population for human analysts',
+      ],
+      regs:['MLR reg.28','MLR reg.33','FCA CDD Review 2025'],
+      regType:['purple','purple','purple'],
+      note:'The orchestrator uses RAG (Retrieval-Augmented Generation) — it only draws on retrieved documents (sanctions lists, customer records, policy docs), never hallucinated facts. This is essential for regulatory compliance.'
+    }
+  },
+
+  // ── SPECIALIST AGENTS (middle ring) ──────────────────────
+  {
+    id:'a_registry', layer:'agent', label:'Corporate Registry', sub:'Agent',
+    x:-220, y:-160, icon:'🏢',
+    detail:{
+      eyebrow:'AI Agent — Specialist',
+      title:'Corporate Registry Agent',
+      sub:'Fetches and parses Companies House data, maps ownership chain, identifies all related parties',
+      status:'active',
+      desc:'Calls the Companies House API with the triggering company number, fetches the full updated filing, and extracts all relevant individuals and entities. For companies with complex structures, it recursively traces the ownership chain (parent → grandparent → ultimate parent) to find all natural persons who exercise control — the UBOs the bank must identify under MLR reg.5.',
+      inputs:[
+        'Company number from orchestrator',
+        'Previous ownership map from CDD records (for delta comparison)',
+      ],
+      outputs:[
+        'Full updated director list with names, DOBs, nationalities',
+        'PSC register — all 25%+ controllers with their details',
+        'Ownership chain map — recursive trace to natural persons',
+        'Delta: new individuals added since last review',
+        'Delta: individuals removed (may indicate attempt to conceal)',
+        'Related entities: subsidiaries, holding companies, SPVs',
+      ],
+      regs:['MLR reg.5','MLR reg.28(3)','JMLSG Part I Ch.5.4'],
+      regType:['indigo','indigo','indigo'],
+      note:'For offshore structures or multi-jurisdiction chains, the agent flags where tracing is incomplete and escalates to the human KYC analyst for manual investigation using international registries.'
+    }
+  },
+  {
+    id:'a_idv', layer:'agent', label:'Identity Verification', sub:'Agent',
+    x:-220, y:160, icon:'🪪',
+    detail:{
+      eyebrow:'AI Agent — Specialist',
+      title:'Identity Verification Agent',
+      sub:'Verifies new individuals exist and match filed details using credit bureau and eIDV services',
+      status:'active',
+      desc:'For each new individual identified by the Corporate Registry Agent, calls Equifax/Experian APIs to verify the person exists at the declared address and DOB, checks for known fraud indicators, and validates address history. Also calls Loqate for address standardisation and validation. For high-risk individuals, may trigger biometric eIDV (Onfido/Entrust) if the bank needs to verify document authenticity.',
+      inputs:[
+        'New individual records from Corporate Registry Agent',
+        'Name, DOB, nationality, address from CH filing',
+        'Bank\'s identity verification policy (which tier applies)',
+      ],
+      outputs:[
+        'Identity match score (Equifax/Experian confidence rating)',
+        'Address validation result (confirmed / not found / discrepancy)',
+        'Fraud indicator flags (e.g. address linked to known fraud)',
+        'Credit bureau confirmation of individual\'s existence',
+        'Document verification result (if biometric eIDV triggered)',
+      ],
+      regs:['MLR reg.28(2)','MLR reg.28(19)','JMLSG Part I Ch.5.3'],
+      regType:['indigo','indigo','indigo'],
+      note:'MLR reg.28(19) explicitly permits electronic verification as an alternative to document-based verification for individuals who cannot produce standard documents.'
+    }
+  },
+  {
+    id:'a_screen', layer:'agent', label:'Sanctions + PEP', sub:'Screening Agent',
+    x:220, y:-160, icon:'🛡',
+    detail:{
+      eyebrow:'AI Agent — Specialist',
+      title:'Sanctions & PEP Screening Agent',
+      sub:'Screens all related parties against sanctions lists, PEP databases and adverse media',
+      status:'alert',
+      desc:'Screens every individual identified by the Corporate Registry Agent against: UK consolidated sanctions list, OFAC, UN, EU and other international lists; global PEP databases (including family members and close associates); and adverse media databases. The agent assesses match quality — distinguishing true matches from false positives using name-matching algorithms, DOB confirmation, and contextual reasoning — and produces a documented rationale for each assessment.',
+      inputs:[
+        'Individual records from Corporate Registry Agent',
+        'PEP/sanctions screening policy (which lists, which match threshold)',
+        'Previous screening records for comparison',
+      ],
+      outputs:[
+        'Screening result per individual: clear / potential match / confirmed match',
+        'PEP classification: domestic PEP, foreign PEP, close associate, family',
+        'Sanctions list hits with specific list, designation type, date added',
+        'Adverse media summary: key articles, dates, severity assessment',
+        'False positive dismissal rationale (if applicable)',
+        'Risk score contribution per individual',
+      ],
+      regs:['MLR reg.33','MLR reg.35','FCA FCG (Nov 2024)','FCA: Treatment of PEPs (2024)'],
+      regType:['rose','rose','rose','rose'],
+      note:'The FCA Nov 2024 FCG update explicitly requires screening of connected parties — not just the named customer. The agent is configured to screen all individuals in the ownership chain, not just direct directors. Starling Bank\'s £29m fine related partly to failure to screen connected parties.'
+    }
+  },
+  {
+    id:'a_media', layer:'agent', label:'Adverse Media', sub:'Agent',
+    x:220, y:160, icon:'📰',
+    detail:{
+      eyebrow:'AI Agent — Specialist',
+      title:'Adverse Media Agent',
+      sub:'Searches global media for negative coverage of all related parties and entities',
+      status:'active',
+      desc:'Uses a combination of commercial databases (Moody\'s/RDC, Refinitiv, Dow Jones) and web search grounded on verified sources to identify adverse media for all individuals and entities in the ownership chain. The LLM summarises findings, assesses relevance and credibility, and identifies which categories of financial crime the coverage relates to. Unlike rule-based keyword systems, the agent understands context — distinguishing a minor civil dispute from a money laundering conviction.',
+      inputs:[
+        'Individual and entity names from Corporate Registry Agent',
+        'Corporate structure (for group-level media search)',
+        'Previous adverse media records (for new coverage identification)',
+      ],
+      outputs:[
+        'Adverse media summary per individual/entity',
+        'Category classification: ML, fraud, sanctions, corruption, regulatory',
+        'Credibility and relevance assessment',
+        'New coverage delta since last review',
+        'Risk score contribution',
+      ],
+      regs:['MLR reg.28(11)','FCA FCG','JMLSG Part I Ch.5'],
+      regType:['rose','rose','rose'],
+      note:'FCA expects ongoing adverse media monitoring — not just a point-in-time check at onboarding. Real-time monitoring means the orchestrator is triggered by new media hits on existing customers, not just by filing events.'
+    }
+  },
+  {
+    id:'a_risk', layer:'agent', label:'Risk Scoring', sub:'Agent',
+    x:0, y:-220, icon:'📈',
+    detail:{
+      eyebrow:'AI Agent — Specialist',
+      title:'Risk Scoring & Assessment Agent',
+      sub:'Aggregates all findings into a composite risk score and determines CDD/EDD pathway',
+      status:'active',
+      desc:'Receives outputs from all other specialist agents and applies the bank\'s risk policy to produce an overall risk score and recommended action. Risk factors include: individual screening results, ownership chain complexity, jurisdictions involved, nature of director roles, adverse media severity, and deviation from the established customer profile. The agent produces a structured risk assessment that meets the FCA\'s documented-rationale requirement.',
+      inputs:[
+        'Identity verification results',
+        'Sanctions/PEP screening results',
+        'Adverse media results',
+        'Corporate structure complexity assessment',
+        'Existing customer risk profile and history',
+        'Bank\'s documented risk appetite and EDD trigger thresholds',
+      ],
+      outputs:[
+        'Composite risk score (Low / Medium / High)',
+        'Risk factor breakdown with individual scores',
+        'Recommended action: auto-resolve / CDD refresh / EDD / MLRO',
+        'EDD trigger rationale (which specific factor crossed threshold)',
+        'Proposed review frequency for ongoing monitoring',
+      ],
+      regs:['MLR reg.18','MLR reg.28','FCA FCG Ch.2','JMLSG Part I Ch.4'],
+      regType:['indigo','indigo','indigo','indigo'],
+      note:'The risk model must be continuously validated against new fraud typologies. The FCA expects banks to demonstrate their scoring models perform correctly — model drift without re-validation is a governance failure.'
+    }
+  },
+  {
+    id:'a_narrative', layer:'agent', label:'Compliance Narrative', sub:'Agent',
+    x:0, y:220, icon:'📝',
+    detail:{
+      eyebrow:'AI Agent — LLM Layer',
+      title:'Compliance Narrative Agent',
+      sub:'Generates FCA-compliant documented rationale for every decision, auto-populates case file',
+      status:'active',
+      desc:'Uses an LLM (with strict RAG guardrails — only retrieved facts, no hallucination) to generate a structured compliance narrative explaining: what was reviewed, what evidence was examined, what was found, why the risk score was assigned, and what action is recommended. This directly addresses the FCA 2025 multi-firm review\'s top finding: <strong>"firms completed EDD but produced no written record of what was considered."</strong>',
+      inputs:[
+        'All sub-agent outputs (identity, screening, media, risk score)',
+        'Bank\'s narrative template and policy requirements',
+        'Previous CDD records for context',
+        'RAG document store: sanctions lists, policy docs, regulatory guidance',
+      ],
+      outputs:[
+        'Structured compliance narrative (FCA documented-rationale format)',
+        'Pre-populated case file ready for human review',
+        'Summary of EDD measures applied (if applicable)',
+        'Suggested wording for senior management approval memo',
+        'Audit trail: data sources, retrieval timestamps, model version',
+      ],
+      regs:['FCA CDD Review 2025','MLR reg.40','SYSC 6.1'],
+      regType:['indigo','indigo','indigo'],
+      note:'RAG (Retrieval-Augmented Generation) is essential here — the LLM is instructed to cite sources and only use retrieved data. Without RAG, LLMs can hallucinate sanctions that don\'t exist, which is a serious compliance risk.'
+    }
+  },
+
+  // ── EXTERNAL SYSTEMS (right) ──────────────────────────────
+  {
+    id:'equifax', layer:'external', label:'Equifax / Experian', sub:'Credit Bureau API',
+    x:520, y:-200, icon:'💳',
+    detail:{
+      eyebrow:'External API — Credit Bureau',
+      title:'Equifax / Experian',
+      sub:'Identity verification, address history, fraud indicators, credit bureau data',
+      status:'active',
+      desc:'The UK\'s two primary credit reference bureaus provide the core identity verification layer for individuals who are not existing bank customers. The Identity Verification Agent calls these APIs to confirm that a person exists at the declared address and DOB, and to check for known fraud indicators (e.g. CIFAS markers, linked fraudulent addresses).',
+      inputs:[],
+      outputs:[
+        'Identity match confidence score (0-100)',
+        'Address confirmation at stated DOB',
+        'Address history (last 3 years)',
+        'CIFAS fraud marker flags',
+        'Linked address / alias flags',
+        'Electoral roll confirmation',
+      ],
+      regs:['MLR reg.28(19)','JMLSG Part I Ch.5.3'],
+      regType:['emerald','emerald'],
+      note:'Electronic verification via credit bureau meets the MLR reg.28(19) standard for identity verification where physical documents are not presented. Banks must document which verification route was used.'
+    }
+  },
+  {
+    id:'complyadvantage', layer:'aml', label:'ComplyAdvantage', sub:'Sanctions / PEP / Media',
+    x:520, y:-40, icon:'🔍',
+    detail:{
+      eyebrow:'AML Data Provider',
+      title:'ComplyAdvantage / Dow Jones / Refinitiv',
+      sub:'Real-time sanctions lists, PEP database, adverse media — used by Screening Agent',
+      status:'alert',
+      desc:'Commercial screening data providers aggregate and normalise sanctions lists (UK consolidated, OFAC, UN, EU, FATF), PEP databases (600,000+ global PEPs including family and associates), and adverse media from 1m+ sources. The Screening Agent queries these via API. FCA expects the bank to understand its screening tool\'s calibration — not just accept pass/fail outputs.',
+      inputs:[],
+      outputs:[
+        'UK Consolidated Sanctions List — updated within hours of changes',
+        'OFAC SDN + consolidated list',
+        'UN Security Council consolidated list',
+        'EU Consolidated List of Persons, Groups and Entities',
+        'Global PEP database (600k+ entries, family/associates)',
+        'Adverse media feed — categorised by crime type',
+      ],
+      regs:['MLR reg.40A','FCA FCG (Nov 2024)','FATF Rec.10'],
+      regType:['rose','rose','rose'],
+      note:'FCA: sanctions lists must be updated promptly after changes. Banks should have documented SLAs for list update turnaround time — typically same-day for UK consolidated list changes.'
+    }
+  },
+  {
+    id:'loqate', layer:'external', label:'Loqate / Onfido', sub:'Address & eIDV',
+    x:520, y:120, icon:'📍',
+    detail:{
+      eyebrow:'External API — Verification Services',
+      title:'Loqate + Onfido / Entrust',
+      sub:'Address validation, email/phone verification, biometric document verification',
+      status:'active',
+      desc:'Loqate provides address standardisation and validation — confirming that a stated address is a real deliverable address and matching it to the Royal Mail PAF database. Onfido (acquired by Entrust in 2024) provides biometric eIDV: document authenticity checking (passport, driving licence), facial recognition, and liveness detection. These are triggered for higher-risk individuals where credit bureau verification alone is insufficient.',
+      inputs:[],
+      outputs:[
+        'Address standardised and validated against PAF',
+        'Email address deliverability and domain risk score',
+        'Phone number validity and line type (mobile/landline/VoIP)',
+        'Document authenticity: MRZ check, chip read, tamper detection',
+        'Biometric face match score (document photo vs live image)',
+        'Liveness detection result',
+      ],
+      regs:['MLR reg.28(2)','MLR reg.28(19)','JMLSG Part I Ch.5.3'],
+      regType:['emerald','emerald','emerald'],
+      note:'Non-face-to-face verification is a higher-risk channel under JMLSG. When directors are verified remotely, additional verification measures (biometric liveness) compensate for the absence of physical document inspection.'
+    }
+  },
+  {
+    id:'case_mgmt', layer:'data', label:'Case Management', sub:'System',
+    x:520, y:280, icon:'🗂',
+    detail:{
+      eyebrow:'Internal System — Records',
+      title:'CDD / KYC Case Management System',
+      sub:'Stores all CDD records, audit trails, decisions, approvals and 5-year retention',
+      status:'active',
+      desc:'The bank\'s internal case management system stores all CDD and EDD records. The Narrative Agent pre-populates a new case with all findings, the compliance narrative, and recommended actions. Human analysts review, add their own assessment, and record their decision. Senior management approvals are captured with name, date, and rationale. All records are retained for 5 years post-relationship end per MLR reg.40.',
+      inputs:[],
+      outputs:[
+        'Pre-populated case file from Narrative Agent',
+        'Full audit trail: data sources, agent versions, timestamps',
+        'Human analyst review and decision record',
+        'Senior management approval record (named, dated, rationale)',
+        'SAR log if applicable',
+        '5-year retention schedule',
+      ],
+      regs:['MLR reg.40','SYSC 6.1','FCA CDD Review 2025'],
+      regType:['yellow','yellow','yellow'],
+      note:'FCA 2025 review: records must be complete, retrievable, and audit-ready for regulatory inspection at any time. Pre-populated AI cases significantly reduce the risk of incomplete records.'
+    }
+  },
+
+  // ── HUMAN ACTORS (bottom) ─────────────────────────────────
+  {
+    id:'h_kyc', layer:'human', label:'KYC Analyst', sub:'Human — 1st line review',
+    x:-220, y:360, icon:'👤',
+    detail:{
+      eyebrow:'Human Actor — First Line',
+      title:'KYC / Onboarding Analyst',
+      sub:'Reviews AI-prepared case, validates findings, makes CDD / EDD determination',
+      status:'human',
+      desc:'The KYC analyst receives the AI-prepared case file with all agent findings, the compliance narrative, and the recommended action. Their role is not to repeat the AI\'s work, but to apply professional judgement: do the findings make sense given their knowledge of the customer? Are there contextual factors the agents might have missed? For standard cases, they approve the AI recommendation. For complex cases, they escalate to Compliance.',
+      inputs:[
+        'Pre-populated case file from Narrative Agent',
+        'Screening results summary',
+        'Ownership structure diagram',
+        'Risk score and factor breakdown',
+        'Recommended action from orchestrator',
+      ],
+      outputs:[
+        'Human review decision: approve / modify / escalate',
+        'Additional context or customer knowledge not captured by agents',
+        'Request for additional information from customer (if needed)',
+        'Sign-off on case file for audit trail',
+      ],
+      regs:['MLR reg.28','FCA CDD Review 2025'],
+      regType:['orange','orange'],
+      note:'AI handles the groundwork. The human provides professional judgement, contextual knowledge, and legal accountability. This is the correct split per FCA expectations — automation of routine tasks, human oversight of decisions.'
+    }
+  },
+  {
+    id:'h_compliance', layer:'human', label:'Compliance Officer', sub:'Human — 2nd line (2LoD)',
+    x:0, y:400, icon:'⚖',
+    detail:{
+      eyebrow:'Human Actor — Second Line of Defence',
+      title:'Compliance Officer (2LoD)',
+      sub:'Independent review of EDD cases, professional scepticism, FCA liaison',
+      status:'human',
+      desc:'The Compliance Officer acts as the second line of defence, providing independent challenge to the KYC analyst\'s assessment. For EDD cases, they must confirm that the EDD measures were adequate, the risk rationale is sound, and the decision is consistent with the bank\'s risk appetite. They apply professional scepticism — the FCA expects genuine challenge, not rubber-stamping. For high-risk cases, they liaise with the MLRO.',
+      inputs:[
+        'KYC analyst review decision',
+        'Full AI case file',
+        'Bank\'s risk appetite framework',
+        'FCA guidance and regulatory context',
+      ],
+      outputs:[
+        'Independent compliance opinion (approve / reject / request more)',
+        'EDD adequacy sign-off',
+        'Risk appetite exception (if applicable)',
+        'Referral to MLRO (if suspicion threshold met)',
+      ],
+      regs:['MLR reg.21','SYSC 6.1','FCA CDD Review 2025'],
+      regType:['orange','orange','orange'],
+      note:'FCA 2025 review: compliance review must be genuinely independent — not a formality. The AI case preparation frees compliance officers to focus on judgement, not paperwork.'
+    }
+  },
+  {
+    id:'h_mlro', layer:'human', label:'MLRO', sub:'Money Laundering Reporting Officer',
+    x:220, y:360, icon:'🔒',
+    detail:{
+      eyebrow:'Human Actor — Designated Officer',
+      title:'MLRO — Money Laundering Reporting Officer',
+      sub:'SAR decisions, NCA reporting, sanctions escalation, board reporting',
+      status:'alert',
+      desc:'The MLRO is the designated officer under POCA 2002 and MLR 2017. They make the final decision on whether to file a Suspicious Activity Report (SAR) to the NCA. For sanctions-linked cases, they assess whether a Defence Against Money Laundering (DAML) request is needed before any further transactions. They are also responsible for board-level reporting on the firm\'s financial crime risk position. Under the Senior Managers and Certification Regime (SMCR), the MLRO holds SMF 17.',
+      inputs:[
+        'Compliance officer referral',
+        'Full AI case file with sanctions connection details',
+        'Transaction history for the customer',
+        'Tipping-off risk assessment',
+      ],
+      outputs:[
+        'SAR decision: file / not file (with documented rationale)',
+        'DAML request to NCA (if pre-consent needed before transaction)',
+        'Account restriction instruction (if sanctions breach confirmed)',
+        'Tipping-off management: instructions to RM and analyst',
+        'Board reporting on financial crime incidents',
+        'FCA notification under SUP 15.3 (if material sanctions breach)',
+      ],
+      regs:['POCA 2002 s.330','POCA 2002 s.333A','TACT 2000 s.21A','SUP 15.3','SMF 17'],
+      regType:['rose','rose','rose','rose','rose'],
+      note:'Tipping-off (POCA s.333A) means the MLRO must manage communications carefully — the customer cannot be told a SAR has been filed or that their account is under investigation.'
+    }
+  },
+  {
+    id:'h_sm', layer:'human', label:'Senior Manager', sub:'SMF 17 — Written EDD Approval',
+    x:-460, y:360, icon:'🏦',
+    detail:{
+      eyebrow:'Human Actor — Senior Management',
+      title:'Senior Manager (SMF 17)',
+      sub:'Mandatory written approval for all EDD relationships — named, dated, rationale recorded',
+      status:'human',
+      desc:'MLR 2017 reg.33(5) and FCA CDD Review 2025 require that EDD relationships receive written approval from a named senior manager. The FCA\'s 2025 review found this was one of the most common failures — approvals were verbal or implied, not documented. The Narrative Agent pre-populates an approval memo; the senior manager reviews and signs (electronically) with their name, date, and personal rationale. This record is retained for 5 years.',
+      inputs:[
+        'Pre-populated EDD approval memo from Narrative Agent',
+        'Risk assessment and recommended action',
+        'Compliance officer sign-off',
+        'Board risk appetite statement for reference',
+      ],
+      outputs:[
+        'Written approval: named, dated, personal rationale',
+        'Conditions attached (if any): product restrictions, monitoring requirements',
+        'Risk appetite exception sign-off (if applicable)',
+        'Case file update confirming approval',
+      ],
+      regs:['MLR reg.33(5)','FCA CDD Review 2025','SYSC 6.3'],
+      regType:['orange','orange','orange'],
+      note:'The FCA 2025 review found: "firms frequently failed to specify who must approve, at what level of seniority, in what form, and with what rationale." The AI approval memo directly addresses this gap.'
+    }
+  },
+  {
+    id:'h_rm', layer:'human', label:'Relationship Manager', sub:'1st Line — Customer contact',
+    x:-460, y:160, icon:'🤝',
+    detail:{
+      eyebrow:'Human Actor — First Line of Defence',
+      title:'Relationship Manager (RM)',
+      sub:'Customer-facing; may request additional information; must NOT tip off if SAR in progress',
+      status:'human',
+      desc:'The RM is the primary point of contact with the customer. They receive instructions from the KYC team on what additional information may be needed (e.g. source of funds documentation, explanation of a new director appointment). If a SAR is being considered or has been filed, the RM must receive strict tipping-off guidance — they cannot disclose to the customer that an investigation is underway. The RM also contributes customer knowledge to the case (e.g. known business relationships that explain a transaction).',
+      inputs:[
+        'Instructions from KYC team: information requests for customer',
+        'Tipping-off guidance from MLRO (if SAR in progress)',
+        'Customer contact log and relationship history',
+      ],
+      outputs:[
+        'Customer-provided information (explanation of director change, SOF etc.)',
+        'RM contextual knowledge: customer business relationships',
+        'Confirmation that customer communication complies with tipping-off rules',
+      ],
+      regs:['MLR reg.28','POCA 2002 s.333A','FCA FCG'],
+      regType:['orange','rose','orange'],
+      note:'If a SAR is in progress, the RM must not ask the customer about the subject matter of the SAR in a way that might tip them off. Clear MLRO guidance to the RM is essential.'
+    }
+  },
+  {
+    id:'nca', layer:'aml', label:'NCA / UKFIU', sub:'National Crime Agency',
+    x:220, y:520, icon:'⚡',
+    detail:{
+      eyebrow:'External — Law Enforcement',
+      title:'National Crime Agency — UK Financial Intelligence Unit',
+      sub:'Receives SARs, issues DAML consent decisions, intelligence sharing',
+      status:'alert',
+      desc:'The NCA\'s UK Financial Intelligence Unit (UKFIU) receives Suspicious Activity Reports filed by the MLRO via the UKFIU portal. For transactions that require pre-consent (DAML — Defence Against Money Laundering), the NCA must respond within 7 working days (or the bank gets deemed consent). The NCA uses SARs as intelligence — they do not confirm or deny investigations to the reporting bank.',
+      inputs:['SAR submission from MLRO via UKFIU portal','DAML consent request if pre-transaction consent needed'],
+      outputs:[
+        'SAR acknowledgement and reference number',
+        'DAML response: consent granted / refused / extended',
+        'No other feedback provided (intelligence stays with NCA)',
+      ],
+      regs:['POCA 2002 s.338','POCA 2002 s.335','TACT 2000'],
+      regType:['rose','rose','rose'],
+      note:'DAML consent: if the bank suspects ML and the transaction hasn\'t yet occurred, they must seek DAML before proceeding. Failure to do so — even if the SAR is later filed — can result in a primary ML offence under POCA 2002.'
+    }
+  },
+];
+
+// ─── EDGES ──────────────────────────────────────────────────────
+// type: 'data'(green), 'cmd'(indigo), 'alert'(red), 'human'(orange), 'result'(cyan)
+const EDGES = [
+  // Triggers → Orchestrator
+  { from:'ch_webhook',  to:'orchestrator', type:'data',   label:'Filing event',        animated:true },
+  { from:'tm_alert',    to:'orchestrator', type:'alert',  label:'TM alert',            animated:true },
+
+  // Orchestrator → Agents
+  { from:'orchestrator',to:'a_registry',  type:'cmd',    label:'Fetch company data',  animated:true },
+  { from:'orchestrator',to:'a_idv',       type:'cmd',    label:'Verify identities',   animated:true },
+  { from:'orchestrator',to:'a_screen',    type:'cmd',    label:'Screen all parties',  animated:true },
+  { from:'orchestrator',to:'a_media',     type:'cmd',    label:'Adverse media check', animated:true },
+  { from:'orchestrator',to:'a_risk',      type:'cmd',    label:'Compute risk score',  animated:true },
+  { from:'orchestrator',to:'a_narrative', type:'cmd',    label:'Generate narrative',  animated:true },
+
+  // Agents → External APIs
+  { from:'a_registry',  to:'ch_api',        type:'data', label:'Company lookup',      animated:true },
+  { from:'a_idv',       to:'equifax',       type:'data', label:'eIDV request',        animated:true },
+  { from:'a_idv',       to:'loqate',        type:'data', label:'Address / doc check', animated:true },
+  { from:'a_screen',    to:'complyadvantage',type:'alert',label:'Screening query',    animated:true },
+  { from:'a_narrative', to:'case_mgmt',     type:'data', label:'Pre-populate case',   animated:true },
+
+  // Agent results → Risk Scorer
+  { from:'a_registry',  to:'a_risk',  type:'result', label:'Structure map',       animated:true },
+  { from:'a_idv',       to:'a_risk',  type:'result', label:'ID result',           animated:true },
+  { from:'a_screen',    to:'a_risk',  type:'alert',  label:'Screening result',    animated:true },
+  { from:'a_media',     to:'a_risk',  type:'result', label:'Media result',        animated:true },
+
+  // Risk → Narrative
+  { from:'a_risk',      to:'a_narrative', type:'result', label:'Risk assessment', animated:true },
+
+  // Orchestrator → Humans
+  { from:'orchestrator',to:'h_rm',    type:'human',  label:'Info request',        animated:false },
+  { from:'orchestrator',to:'h_kyc',   type:'human',  label:'Case for review',     animated:true },
+
+  // Human chain
+  { from:'h_kyc',   to:'h_compliance', type:'human', label:'Escalate EDD',        animated:false },
+  { from:'h_kyc',   to:'h_sm',         type:'human', label:'Approval request',    animated:false },
+  { from:'h_compliance',to:'h_mlro',   type:'alert', label:'SAR referral',        animated:false },
+  { from:'h_mlro',  to:'nca',          type:'alert', label:'SAR / DAML to NCA',   animated:true },
+  { from:'h_rm',    to:'h_kyc',        type:'human', label:'Customer info',       animated:false },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// CANVAS ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+
+// Engine globals (declared inside scope)
+let C, ctx, W, H;
+let tx = 0, ty = 0, scale = 1;
+let dragging = false, dragLast = null;
+let hoverNode = null, hoverEdge = null;
+let selNode = null, selEdge = null;
+let tick = 0;
+let raf = null;
+
+const nodeById = {};
+NODES.forEach(n => nodeById[n.id] = n);
+
+// Expose initArch globally for masterNav to call
+window.initArch = function() {
+  C = document.getElementById('arch-canvas');
+  if (!C) return;
+  // Set definitive inline positioning — overrides ALL CSS cascade issues
+  C.style.cssText = 'display:block;position:absolute;top:48px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 48px);cursor:grab;';
+  var lv = document.getElementById('arch-layer-view');
+  if (lv) lv.style.cssText = 'display:none;position:absolute;top:48px;left:0;right:0;bottom:0;overflow-y:auto;padding:28px 380px 60px 32px;background:#070b14;';
+  var ap = document.getElementById('arch-panel');
+  if (ap) ap.style.cssText = 'position:absolute;top:64px;right:16px;max-height:calc(100% - 80px);z-index:300;';
+  var al = document.getElementById('arch-legend');
+  if (al) al.style.cssText = 'position:absolute;bottom:16px;left:16px;z-index:200;';
+  var az = document.getElementById('arch-zoom');
+  if (az) az.style.cssText = 'position:absolute;bottom:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:4px;';
+  ctx = C.getContext('2d');
+
+let W, H;
+let tx = 0, ty = 0, scale = 1;
+let dragging = false, dragLast = null;
+let hoverNode = null, hoverEdge = null;
+let selNode = null, selEdge = null;
+let tick = 0;
+let raf;
+
+// Pre-compute node lookup
+
+
+
+function resize() {
+  const r = C.parentElement.getBoundingClientRect();
+  W = C.width = r.width;
+  H = C.height = r.height;
+}
+
+function fitView() {
+  const xs = NODES.map(n=>n.x), ys = NODES.map(n=>n.y);
+  const pad = 120;
+  const minX=Math.min(...xs)-pad, maxX=Math.max(...xs)+pad;
+  const minY=Math.min(...ys)-pad, maxY=Math.max(...ys)+pad;
+  const bw=maxX-minX, bh=maxY-minY;
+  const panelW = 360;
+  const sx=(W-panelW-20)/bw, sy=(H-52)/bh;
+  scale = Math.min(sx,sy,1.0);
+  tx = (W-panelW)/2 - ((minX+maxX)/2)*scale;
+  ty = H/2 - ((minY+maxY)/2)*scale;
+}
+
+function zoomBy(f) {
+  const cx=W/2, cy=H/2;
+  tx=cx+(tx-cx)*f; ty=cy+(ty-cy)*f;
+  scale=Math.max(0.2,Math.min(2.5,scale*f));
+}
+
+function w2s(x,y){ return {x:x*scale+tx, y:y*scale+ty}; }
+function s2w(sx,sy){ return {x:(sx-tx)/scale, y:(sy-ty)/scale}; }
+
+// Node geometry
+function nodeGeom(n) {
+  const layer = n.layer;
+  if (layer==='orchestrator') return {type:'hex',r:44};
+  if (layer==='trigger')      return {type:'diamond',hw:54,hh:38};
+  if (layer==='human')        return {type:'rect',hw:68,hh:30};
+  if (layer==='external')     return {type:'rect',hw:62,hh:28};
+  if (layer==='aml')          return {type:'rect',hw:62,hh:28};
+  if (layer==='data')         return {type:'rect',hw:58,hh:28};
+  return {type:'circle',r:36};
+}
+
+function nodeColor(n) {
+  const map = {
+    orchestrator: '#c084fc',
+    agent:        '#818cf8',
+    trigger:      '#06b6d4',
+    external:     '#34d399',
+    human:        '#fb923c',
+    aml:          '#f43f5e',
+    data:         '#facc15',
+  };
+  return map[n.layer]||'#818cf8';
+}
+
+function edgeColor(e) {
+  const map = {data:'#34d399',cmd:'#818cf8',alert:'#f43f5e',human:'#fb923c',result:'#06b6d4'};
+  return map[e.type]||'#818cf8';
+}
+
+// Hit test
+function hitNode(n,wx,wy){
+  const g=nodeGeom(n);
+  const dx=wx-n.x, dy=wy-n.y;
+  if(g.type==='circle'||g.type==='hex') return Math.sqrt(dx*dx+dy*dy)<=g.r+4;
+  if(g.type==='diamond') return Math.abs(dx)/g.hw+Math.abs(dy)/g.hh<=1.1;
+  return Math.abs(dx)<=g.hw+4&&Math.abs(dy)<=g.hh+4;
+}
+
+// Edge midpoint hit test (fat line ~8px)
+function hitEdge(e,wx,wy){
+  const a=nodeById[e.from], b=nodeById[e.to];
+  if(!a||!b)return false;
+  const {sx,sy,ex,ey}=edgeEndpoints(e,a,b);
+  const dx=ex-sx,dy=ey-sy,len=Math.sqrt(dx*dx+dy*dy);
+  if(len<1)return false;
+  const ux=dx/len,uy=dy/len;
+  const px=wx-sx,py=wy-sy;
+  const t=Math.max(0,Math.min(len,px*ux+py*uy));
+  const nearX=sx+ux*t,nearY=sy+uy*t;
+  const dist=Math.sqrt((wx-nearX)**2+(wy-nearY)**2);
+  return dist<=10/scale;
+}
+
+function edgeEndpoints(e,a,b){
+  const ga=nodeGeom(a),gb=nodeGeom(b);
+  const dx=b.x-a.x,dy=b.y-a.y;
+  const dist=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/dist,uy=dy/dist;
+  let sx=a.x,sy=a.y,ex=b.x,ey=b.y;
+  const ra=ga.type==='circle'||ga.type==='hex'?ga.r:(ga.hw||50);
+  const rb=gb.type==='circle'||gb.type==='hex'?gb.r:(gb.hw||50);
+  sx=a.x+ux*(ra+2); sy=a.y+uy*(ra+2);
+  ex=b.x-ux*(rb+2); ey=b.y-uy*(rb+2);
+  return {sx,sy,ex,ey,ux,uy};
+}
+
+// ─── DRAW ────────────────────────────────────────────────────
+function draw(){
+  tick++;
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  ctx.save();
+  ctx.strokeStyle='#ffffff05';
+  ctx.lineWidth=1;
+  const gs=50*scale;
+  const ox=tx%gs,oy=ty%gs;
+  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(tx,ty);
+  ctx.scale(scale,scale);
+
+  // Layer labels
+  drawLayerLabels();
+
+  // Edges
+  EDGES.forEach(e=>drawEdge(e));
+  // Nodes
+  NODES.forEach(n=>drawNode(n));
+
+  ctx.restore();
+  raf=requestAnimationFrame(draw);
+}
+
+function drawLayerLabels(){
+  // Faint background bands
+  const bands=[
+    {y:-320,h:180,label:'TRIGGER / EVENT SOURCES',col:'#06b6d440'},
+    {y:-140,h:480,label:'AI AGENT LAYER',col:'#818cf820'},
+    {y:340,h:240,label:'HUMAN REVIEW & APPROVAL',col:'#fb923c20'},
+  ];
+  bands.forEach(b=>{
+    ctx.fillStyle=b.col;
+    ctx.fillRect(-700,b.y,1400,b.h);
+    ctx.font='700 10px DM Mono, monospace';
+    ctx.fillStyle=b.col.replace('20','80').replace('40','80');
+    ctx.textAlign='left';
+    ctx.textBaseline='top';
+    ctx.letterSpacing='0.12em';
+    ctx.fillText(b.label,-690,b.y+6);
+  });
+}
+
+function drawEdge(e){
+  const a=nodeById[e.from],b=nodeById[e.to];
+  if(!a||!b)return;
+  const {sx,sy,ex,ey,ux,uy}=edgeEndpoints(e,a,b);
+  const col=edgeColor(e);
+  const isSel=selEdge===e,isHov=hoverEdge===e;
+  const isConnected=selNode&&(selNode.id===e.from||selNode.id===e.to);
+  const fade=(!selNode&&!selEdge)||(isSel||isHov||isConnected);
+  const baseAlpha=fade?1.0:0.18;
+
+  // Pulse animation
+  const pulseMag=e.type==='alert'?0.45:0.25;
+  const pulseAlpha=baseAlpha*(0.7+Math.sin(tick*0.05+(e.from.charCodeAt(0)*0.3))*pulseMag);
+
+  ctx.save();
+
+  // Glow pass
+  if(fade){
+    ctx.globalAlpha=pulseAlpha*0.35;
+    ctx.strokeStyle=col;
+    ctx.lineWidth=(isSel?5:3)+6;
+    ctx.shadowColor=col;
+    ctx.shadowBlur=12;
+    ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.shadowBlur=0;
+  }
+
+  // Main line
+  ctx.globalAlpha=pulseAlpha;
+  ctx.strokeStyle=col;
+  ctx.lineWidth=isSel?3:1.8;
+  ctx.shadowColor=col;
+  ctx.shadowBlur=isSel?8:3;
+  if(e.type==='human') ctx.setLineDash([6,4]);
+  else ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.shadowBlur=0;
+
+  // Arrowhead
+  ctx.fillStyle=col;
+  const ax=ex-ux*11,ay=ey-uy*11;
+  const px=-uy,py=ux;
+  ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ax+px*5,ay+py*5);ctx.lineTo(ax-px*5,ay-py*5);ctx.closePath();ctx.fill();
+
+  // Animated flow dot
+  if(e.animated&&fade){
+    const phase=(tick*0.012+(e.from.charCodeAt(1||0)*0.15))%1;
+    const dotX=sx+(ex-sx)*phase, dotY=sy+(ey-sy)*phase;
+    const dx2=ex-sx,dy2=ey-sy;
+    const len=Math.sqrt(dx2*dx2+dy2*dy2);
+    if(len>20){
+      ctx.globalAlpha=pulseAlpha*0.9;
+      ctx.beginPath();ctx.arc(dotX,dotY,3.5,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;
+    }
+  }
+
+  // Label pill — always visible
+  const mx=(sx+ex)/2,my=(sy+ey)/2;
+  ctx.globalAlpha=fade?0.85:0.0;
+  ctx.font='500 8px DM Sans, sans-serif';
+  const tw=ctx.measureText(e.label).width;
+  const px2=5,py2=3;
+  ctx.fillStyle='#070b14';
+  roundRect(ctx,mx-tw/2-px2,my-7-py2,tw+px2*2,13+py2*2,3);
+  ctx.fill();
+  ctx.strokeStyle=col;
+  ctx.lineWidth=0.8;
+  ctx.globalAlpha=fade?0.6:0.0;
+  roundRect(ctx,mx-tw/2-px2,my-7-py2,tw+px2*2,13+py2*2,3);
+  ctx.stroke();
+  ctx.globalAlpha=fade?0.9:0.0;
+  ctx.fillStyle=col;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(e.label,mx,my-1);
+
+  ctx.restore();
+}
+
+function drawNode(n){
+  const col=nodeColor(n);
+  const isSel=selNode&&selNode.id===n.id;
+  const isHov=hoverNode&&hoverNode.id===n.id;
+  const connected=selNode&&EDGES.some(e=>(e.from===selNode.id&&e.to===n.id)||(e.to===selNode.id&&e.from===n.id));
+  const fade=!selNode||(isSel||connected);
+  const alpha=fade?1.0:0.2;
+
+  const g=nodeGeom(n);
+  const p=tick*0.04+(n.x*0.007);
+  const glowPulse=0.6+Math.sin(p)*0.4;
+
+  ctx.save();
+  ctx.globalAlpha=alpha;
+
+  if(g.type==='hex'){
+    // Orchestrator — hexagon
+    drawHex(ctx,n.x,n.y,g.r,col,isSel||isHov,glowPulse);
+    ctx.globalAlpha=alpha;
+    ctx.font='700 10px Syne, sans-serif';
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.icon,n.x,n.y-10);
+    ctx.font='600 10px Syne, sans-serif';
+    ctx.fillStyle='#e2e8f4';
+    ctx.fillText(n.label,n.x,n.y+4);
+    ctx.font='400 8px DM Mono, monospace';
+    ctx.fillStyle=col;
+    ctx.fillText(n.sub,n.x,n.y+16);
+
+  } else if(g.type==='diamond'){
+    // Trigger — diamond
+    ctx.shadowColor=col;ctx.shadowBlur=(isSel||isHov)?18:8*glowPulse;
+    ctx.beginPath();
+    ctx.moveTo(n.x,n.y-g.hh);ctx.lineTo(n.x+g.hw,n.y);
+    ctx.lineTo(n.x,n.y+g.hh);ctx.lineTo(n.x-g.hw,n.y);ctx.closePath();
+    ctx.fillStyle=isSel?'#0d2535':'#061520';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=isSel?2:1.5;ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.font='12px DM Sans';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.icon,n.x,n.y-8);
+    ctx.font=`600 9px Syne, sans-serif`;ctx.fillStyle='#e2e8f4';
+    ctx.fillText(n.label,n.x,n.y+5);
+    ctx.font='400 7.5px DM Mono, monospace';ctx.fillStyle=col;
+    ctx.fillText(n.sub,n.x,n.y+16);
+
+  } else if(g.type==='rect'){
+    // External/human/data/aml — rounded rect
+    ctx.shadowColor=col;ctx.shadowBlur=(isSel||isHov)?16:6*glowPulse;
+    roundRect(ctx,n.x-g.hw,n.y-g.hh,g.hw*2,g.hh*2,8);
+    ctx.fillStyle=isSel?`${col}22`:'#0c1828';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=isSel?2:1.2;ctx.stroke();
+    ctx.shadowBlur=0;
+    // Icon + label
+    ctx.font='11px DM Sans';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.icon,n.x-g.hw+16,n.y);
+    ctx.font=`600 9.5px Syne, sans-serif`;ctx.fillStyle='#dde8f8';
+    ctx.textAlign='left';ctx.fillText(n.label,n.x-g.hw+28,n.y-6);
+    ctx.font='400 7.5px DM Mono, monospace';ctx.fillStyle=col;
+    ctx.fillText(n.sub,n.x-g.hw+28,n.y+7);
+
+  } else {
+    // Agent — circle
+    ctx.shadowColor=col;ctx.shadowBlur=(isSel||isHov)?20:10*glowPulse;
+    // Outer ring
+    ctx.beginPath();ctx.arc(n.x,n.y,g.r+4+Math.sin(p)*2,0,Math.PI*2);
+    ctx.fillStyle=col+'18';ctx.fill();
+    // Main circle
+    ctx.beginPath();ctx.arc(n.x,n.y,g.r,0,Math.PI*2);
+    ctx.fillStyle=isSel?`${col}30`:'#090f1e';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=isSel?2.5:1.8;ctx.stroke();
+    ctx.shadowBlur=0;
+    // Icon
+    ctx.font='15px DM Sans';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(n.icon,n.x,n.y-8);
+    // Label
+    ctx.font=`600 9px Syne, sans-serif`;ctx.fillStyle='#dde8f8';
+    ctx.fillText(n.label,n.x,n.y+5);
+    ctx.font='400 7.5px DM Mono, monospace';ctx.fillStyle=col;
+    ctx.fillText(n.sub,n.x,n.y+17);
+  }
+
+  ctx.restore();
+}
+
+function drawHex(ctx,cx,cy,r,col,active,glow){
+  ctx.shadowColor=col;ctx.shadowBlur=active?24:12*glow;
+  // Outer glow ring
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const a=Math.PI/180*(60*i-30);
+    i===0?ctx.moveTo(cx+Math.cos(a)*(r+6),cy+Math.sin(a)*(r+6)):ctx.lineTo(cx+Math.cos(a)*(r+6),cy+Math.sin(a)*(r+6));
+  }
+  ctx.closePath();
+  ctx.fillStyle=col+'25';ctx.fill();
+  // Main hex
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const a=Math.PI/180*(60*i-30);
+    i===0?ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+  }
+  ctx.closePath();
+  ctx.fillStyle=active?'#1e1040':'#100820';ctx.fill();
+  ctx.strokeStyle=col;ctx.lineWidth=active?2.5:1.8;ctx.stroke();
+  ctx.shadowBlur=0;
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+// ─── INTERACTION ─────────────────────────────────────────────
+function getNodeAt(sx,sy){
+  const w=s2w(sx,sy);
+  for(let i=NODES.length-1;i>=0;i--){
+    if(hitNode(NODES[i],w.x,w.y))return NODES[i];
+  }
+  return null;
+}
+function getEdgeAt(sx,sy){
+  const w=s2w(sx,sy);
+  for(let e of EDGES){
+    if(hitEdge(e,w.x,w.y))return e;
+  }
+  return null;
+}
+
+C.addEventListener('mousedown',e=>{
+  dragging=true; dragLast={x:e.clientX,y:e.clientY-52};
+});
+C.addEventListener('mouseup',()=>dragging=false);
+C.addEventListener('mouseleave',()=>{dragging=false;hoverNode=null;hoverEdge=null;});
+
+C.addEventListener('mousemove',e=>{
+  const sx=e.clientX, sy=e.clientY-52;
+  if(dragging&&dragLast){
+    tx+=sx-dragLast.x; ty+=sy-dragLast.y;
+    dragLast={x:sx,y:sy};
+    return;
+  }
+  const node=getNodeAt(sx,sy);
+  const edge=!node?getEdgeAt(sx,sy):null;
+  hoverNode=node; hoverEdge=edge;
+  const tip=document.getElementById('arch-tip');
+  if(node){
+    C.style.cursor='pointer';
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px';
+    tip.style.top=(e.clientY-10)+'px';
+    tip.textContent=node.detail.sub;
+  } else if(edge){
+    C.style.cursor='pointer';
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px';
+    tip.style.top=(e.clientY-10)+'px';
+    tip.textContent=`${edge.from} → ${edge.to}: ${edge.label}`;
+  } else {
+    C.style.cursor='grab';
+    tip.style.display='none';
+  }
+});
+
+C.addEventListener('click',e=>{
+  if(dragging&&dragLast&&(Math.abs(e.clientX-dragLast.x)>4||Math.abs(e.clientY-52-dragLast.y)>4))return;
+  const sx=e.clientX, sy=e.clientY-52;
+  const node=getNodeAt(sx,sy);
+  const edge=!node?getEdgeAt(sx,sy):null;
+  if(node){
+    selNode=(selNode?.id===node.id)?null:node;
+    selEdge=null;
+    showNodePanel(selNode);
+  } else if(edge){
+    selEdge=(selEdge===edge)?null:edge;
+    selNode=null;
+    showEdgePanel(selEdge);
+  } else {
+    selNode=null; selEdge=null;
+    document.getElementById('arch-panel').classList.add('hidden');
+  }
+});
+
+C.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const sx=e.clientX,sy=e.clientY-52;
+  const f=e.deltaY<0?1.12:0.89;
+  tx=sx+(tx-sx)*f; ty=sy+(ty-sy)*f;
+  scale=Math.max(0.2,Math.min(2.5,scale*f));
+},{passive:false});
+
+// ─── PANEL ───────────────────────────────────────────────────
+function typeTagHtml(code,type){
+  return `<span class="p-tag ${type}">${code}</span>`;
+}
+
+function showNodePanel(node){
+  const panel=document.getElementById('arch-panel');
+  if(!node){panel.classList.add('hidden');return;}
+  const d=node.detail;
+  const col=nodeColor(node);
+  panel.classList.remove('hidden');
+  document.getElementById('a-p-eyebrow').textContent=d.eyebrow;
+  document.getElementById('a-p-eyebrow').style.color=col;
+  document.getElementById('a-p-title').textContent=d.title;
+  document.getElementById('a-p-sub').textContent=d.sub;
+
+  const statusMap={active:'active',alert:'alert',wait:'wait',human:'human'};
+  const statusLabel={active:'RUNNING',alert:'⚠ ACTION REQUIRED',wait:'STANDBY',human:'AWAITING HUMAN'};
+
+  let html=`<div class="p-status ${statusMap[d.status]||'active'}">${statusLabel[d.status]||'ACTIVE'}</div>`;
+
+  html+=`<div><div class="p-section-label">Overview</div><div class="p-text">${d.desc}</div></div>`;
+
+  if(d.inputs&&d.inputs.length){
+    html+=`<div><div class="p-section-label">Inputs received</div><div class="p-data-block"><div class="p-data-label">What comes in</div>`;
+    d.inputs.forEach(i=>html+=`<div class="p-data-row">${i}</div>`);
+    html+=`</div></div>`;
+  }
+  if(d.outputs&&d.outputs.length){
+    html+=`<div><div class="p-section-label">Outputs produced</div><div class="p-data-block"><div class="p-data-label">What goes out</div>`;
+    d.outputs.forEach(o=>html+=`<div class="p-data-row ok">${o}</div>`);
+    html+=`</div></div>`;
+  }
+  if(d.regs&&d.regs.length){
+    html+=`<div><div class="p-section-label">Regulatory obligations</div><div class="p-tags">`;
+    d.regs.forEach((r,i)=>html+=typeTagHtml(r,d.regType[i]||'indigo'));
+    html+=`</div></div>`;
+  }
+  if(d.note){
+    html+=`<div class="p-data-block" style="border-color:#1e3352;background:#0a111e">
+      <div class="p-data-label" style="color:#6a85a8">Regulatory note</div>
+      <div class="p-text" style="color:#6a85a8;font-size:11px">${d.note}</div>
+    </div>`;
+  }
+
+  document.getElementById('a-p-body').innerHTML=html;
+}
+
+function showEdgePanel(e){
+  const panel=document.getElementById('arch-panel');
+  if(!e){panel.classList.add('hidden');return;}
+  const col=edgeColor(e);
+  const a=nodeById[e.from], b=nodeById[e.to];
+  panel.classList.remove('hidden');
+
+  document.getElementById('a-p-eyebrow').textContent='Data Flow — '+e.type.toUpperCase();
+  document.getElementById('a-p-eyebrow').style.color=col;
+  document.getElementById('a-p-title').textContent=`${a.label} → ${b.label}`;
+  document.getElementById('a-p-sub').textContent=e.label;
+
+  const typeDesc={
+    data:'Data / API response — structured information returned from an external system or agent',
+    cmd:'Agent command — orchestrator instruction to a specialist sub-agent',
+    alert:'Alert / escalation — high-priority signal indicating a risk finding requiring action',
+    human:'Human review — information passed to a human actor for review, decision or approval',
+    result:'Agent result — sub-agent output fed back to orchestrator or risk scoring agent',
+  };
+
+  const flowData = {
+    'ch_webhook->orchestrator':['Filing event type (director appointment / PSC change / address)','Company registration number and name','Date of filing and effective date','New individual details from the CH XML filing (name, DOB, nationality)'],
+    'tm_alert->orchestrator':['Alert type and severity classification','Triggering transaction: amount, currency, counterparty, date','Risk score delta from baseline','Suggested investigation category'],
+    'orchestrator->a_registry':['Company registration number to look up','Task: fetch full officer list, PSC register, group structure','Comparison baseline: previous director/UBO list for delta detection'],
+    'orchestrator->a_idv':['List of new individuals to verify (names, DOBs, addresses)','Verification tier required (standard / enhanced)','Policy: which bureau APIs to call'],
+    'orchestrator->a_screen':['All individuals in ownership chain to screen','Entities to screen (companies in structure)','Policy: which lists to check, match threshold, false-positive handling'],
+    'orchestrator->a_media':['Individual and entity names for media search','Scope: current + historical coverage','Language scope and source list configuration'],
+    'orchestrator->a_risk':['All sub-agent results aggregated','Customer risk profile baseline','Bank\'s risk scoring model parameters and EDD trigger thresholds'],
+    'orchestrator->a_narrative':['Full aggregated findings from all agents','Narrative template and FCA documented-rationale format','Previous CDD records for context','RAG document store location'],
+    'a_registry->ch_api':['Company number lookup request','Officer list request (current + resigned)','PSC register request','Group structure request (if applicable)'],
+    'a_idv->equifax':['Individual name, DOB, address for verification','Verification request type (existence / fraud check / address history)'],
+    'a_idv->loqate':['Address string for standardisation and PAF lookup','Email address for deliverability check','Phone number for validity and type check'],
+    'a_screen->complyadvantage':['Individual full name, DOB, nationality for screening','Entity name and registration country','Lists to screen: UK consolidated, OFAC, UN, EU, PEP database','Match threshold configuration'],
+    'a_narrative->case_mgmt':['Pre-populated case file with all findings','Compliance narrative draft (FCA documented-rationale format)','Risk score and factor breakdown','Recommended action and routing decision','EDD approval memo template (if EDD triggered)','Audit trail: data sources, timestamps, model version'],
+    'a_registry->a_risk':['Ownership structure complexity score','Number of layers, jurisdictions, nominee arrangements','New individuals added (delta from baseline)'],
+    'a_idv->a_risk':['Identity verification result per individual','Address confirmation / discrepancy flags','Fraud indicator flags'],
+    'a_screen->a_risk':['Sanctions screening result per individual (clear / match / confirmed)','PEP classification if applicable','Adverse screening hit details'],
+    'a_media->a_risk':['Adverse media severity per individual/entity','Crime category classification','New coverage since last review'],
+    'a_risk->a_narrative':['Composite risk score (Low / Medium / High)','Factor breakdown with individual scores','Recommended action','EDD trigger rationale if applicable'],
+    'orchestrator->h_kyc':['Pre-populated case file from Narrative Agent','Screening results summary','Ownership structure diagram','Risk score and factor breakdown','Recommended action (for human review and sign-off)'],
+    'orchestrator->h_rm':['Information request: what to ask the customer','Tipping-off guidance if SAR is being considered','Script for customer contact compliant with POCA s.333A'],
+    'h_kyc->h_compliance':['KYC analyst review decision','Additional contextual notes','Case file with analyst annotations','Escalation reason: EDD required / complexity / adverse finding'],
+    'h_kyc->h_sm':['EDD approval memo (AI pre-populated)','Risk assessment summary','Compliance officer sign-off','Request for named, dated, documented approval'],
+    'h_compliance->h_mlro':['SAR referral with full case details','Compliance assessment of suspicion threshold','Recommended SAR category'],
+    'h_mlro->nca':['SAR submission via UKFIU portal','DAML request (if pre-transaction consent needed)','Full supporting evidence (case file)'],
+    'h_rm->h_kyc':['Customer-provided explanation of director change','Source of funds documentation (if requested)','Customer business context and relationships'],
+  };
+
+  const key=`${e.from}->${e.to}`;
+  const dataPoints=flowData[key]||['See node detail for full information flow'];
+
+  let html=`<div><div class="p-section-label">Flow type</div><div class="p-text">${typeDesc[e.type]||e.type}</div></div>`;
+  html+=`<div><div class="p-section-label">Data in transit — ${e.label}</div><div class="p-data-block"><div class="p-data-label">Payload</div>`;
+  dataPoints.forEach(d=>html+=`<div class="p-data-row">${d}</div>`);
+  html+=`</div></div>`;
+
+  // Animated indicator
+  if(e.animated){
+    html+=`<div class="p-status active">● LIVE DATA FLOW — animated</div>`;
+  } else {
+    html+=`<div class="p-status wait">◌ Event-driven — not always active</div>`;
+  }
+
+  html+=`<div class="p-data-block" style="border-color:#1e3352;background:#0a111e">
+    <div class="p-data-label" style="color:#6a85a8">From → To</div>
+    <div class="p-text" style="color:#6a85a8;font-size:11px">${a.detail.eyebrow} → ${b.detail.eyebrow}</div>
+  </div>`;
+
+  document.getElementById('a-p-body').innerHTML=html;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+
+  // auto-init
+  window.addEventListener('resize', () => { resize(); });
+  resize(); fitView(); draw();
+}
+
+// Post-init functions (switchTab, lvSelect etc.) — these reference C/ctx via closure
+
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  var canvas = document.getElementById('arch-canvas');
+  var lv = document.getElementById('arch-layer-view');
+  var panel = document.getElementById('arch-panel');
+  var legend = document.getElementById('arch-legend');
+  var zoom = document.getElementById('arch-zoom');
+  var lvPanel = document.getElementById('a-lv-panel');
+  var hint = document.getElementById('a-h-hint');
+
+  document.getElementById('a-tab-graph').classList.toggle('active', tab === 'graph');
+  document.getElementById('a-tab-layers').classList.toggle('active', tab === 'layers');
+
+  if (tab === 'graph') {
+    if (canvas) canvas.style.display = 'block';
+    if (lv)     lv.style.display = 'none';
+    if (panel)  { panel.style.display = ''; panel.classList.remove('canvas-hidden'); }
+    if (legend) { legend.style.display = ''; }
+    if (zoom)   { zoom.style.display = ''; }
+    if (lvPanel) lvPanel.style.display = 'none';
+    if (hint) hint.textContent = 'CLICK nodes or connections · DRAG to pan · SCROLL to zoom';
+    if (!raf) draw();
+  } else {
+    if (canvas) canvas.style.display = 'none';
+    if (lv)     lv.style.display = 'block';
+    if (panel)  { panel.style.display = 'none'; }
+    if (legend) { legend.style.display = 'none'; }
+    if (zoom)   { zoom.style.display = 'none'; }
+    if (lvPanel) lvPanel.style.display = '';
+    if (hint) hint.textContent = 'CLICK any component card for detail';
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+  }
+}
+
+// ─── LAYERED VIEW INTERACTION ─────────────────────────────────
+function toggleLayer(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+let lvSelected = null;
+
+function lvSelect(card, nodeId, specialId) {
+  // Deselect previous
+  if (lvSelected) lvSelected.classList.remove('selected');
+  lvSelected = card;
+  if (card) card.classList.add('selected');
+
+  const lvPanel = document.getElementById('a-lv-panel');
+
+  if (specialId === 'periodic') {
+    lvPanel.classList.remove('hidden');
+    document.getElementById('a-lv-eyebrow').textContent = 'Internal System — Scheduler';
+    document.getElementById('a-lv-eyebrow').style.color = '#06b6d4';
+    document.getElementById('a-lv-title').textContent = 'Periodic KYC Refresh Scheduler';
+    document.getElementById('a-lv-sub').textContent = 'Risk-tiered automated refresh for all customers';
+    document.getElementById('a-lv-body').innerHTML = `
+      <div class="p-status active">● SCHEDULED — runs continuously</div>
+      <div><div class="p-section-label">Overview</div>
+      <div class="p-text">The scheduler is the <strong>safety net</strong> — it ensures that even if the Companies House webhook misses a change (e.g. for offshore entities not registered in the UK), the pipeline still runs periodically. High-risk customers are refreshed annually; standard-risk every 3 years. The agent pipeline runs in full for each scheduled refresh.</div></div>
+      <div><div class="p-section-label">Review frequencies</div>
+      <div class="p-data-block"><div class="p-data-label">By risk tier</div>
+        <div class="p-data-row ok">High risk (EDD): 6–12 months</div>
+        <div class="p-data-row ok">Medium risk: 12–24 months</div>
+        <div class="p-data-row ok">Low / standard risk: 24–36 months</div>
+        <div class="p-data-row alert">Overdue refresh = heightened risk flag</div>
+      </div></div>
+      <div class="p-data-block" style="border-color:#1e3352;background:#0a111e">
+        <div class="p-data-label" style="color:#6a85a8">Regulatory note</div>
+        <div class="p-text" style="color:#6a85a8;font-size:11px">FCA 2025 review: event-driven and periodic review triggers must be explicitly defined in policy — not left to RM judgement. AI scheduling with documented frequency rules meets this requirement.</div>
+      </div>`;
+    return;
+  }
+  if (specialId === 'manual') {
+    lvPanel.classList.remove('hidden');
+    document.getElementById('a-lv-eyebrow').textContent = 'Human-Initiated Trigger';
+    document.getElementById('a-lv-eyebrow').style.color = '#fb923c';
+    document.getElementById('a-lv-title').textContent = 'Manual Trigger / RM Referral';
+    document.getElementById('a-lv-sub').textContent = 'Human-initiated pipeline execution';
+    document.getElementById('a-lv-body').innerHTML = `
+      <div class="p-status human">◈ HUMAN INITIATED</div>
+      <div><div class="p-section-label">Overview</div>
+      <div class="p-text">Any human actor can manually trigger the pipeline: the RM upon customer disclosure, the compliance team upon spotting adverse news, or the KYC team upon receiving a request from the customer that raises concerns. This is the <strong>first-line-of-defence escalation path</strong> not covered by automated triggers.</div></div>
+      <div><div class="p-section-label">Manual trigger scenarios</div>
+      <div class="p-data-block"><div class="p-data-label">Examples</div>
+        <div class="p-data-row human">Customer tells RM they've appointed a new director</div>
+        <div class="p-data-row human">RM sees news article about a company in the ownership chain</div>
+        <div class="p-data-row human">Transaction request for an unusual jurisdiction</div>
+        <div class="p-data-row human">Compliance team receives a third-party tip-off</div>
+        <div class="p-data-row alert">Customer account behaviour changes significantly</div>
+      </div></div>`;
+    return;
+  }
+
+  if (!nodeId) { lvPanel.classList.add('hidden'); return; }
+
+  // Find node and reuse the graph panel logic
+  const node = nodeById[nodeId];
+  if (!node) { lvPanel.classList.add('hidden'); return; }
+
+  lvPanel.classList.remove('hidden');
+  const d = node.detail;
+  const col = nodeColor(node);
+  document.getElementById('a-lv-eyebrow').textContent = d.eyebrow;
+  document.getElementById('a-lv-eyebrow').style.color = col;
+  document.getElementById('a-lv-title').textContent = d.title;
+  document.getElementById('a-lv-sub').textContent = d.sub;
+
+  const statusMap={active:'active',alert:'alert',wait:'wait',human:'human'};
+  const statusLabel={active:'RUNNING',alert:'⚠ ACTION REQUIRED',wait:'STANDBY',human:'AWAITING HUMAN'};
+  let html = `<div class="p-status ${statusMap[d.status]||'active'}">${statusLabel[d.status]||'ACTIVE'}</div>`;
+  html += `<div><div class="p-section-label">Overview</div><div class="p-text">${d.desc}</div></div>`;
+  if(d.inputs&&d.inputs.length){
+    html+=`<div><div class="p-section-label">Inputs</div><div class="p-data-block"><div class="p-data-label">What comes in</div>`;
+    d.inputs.forEach(i=>html+=`<div class="p-data-row">${i}</div>`);
+    html+=`</div></div>`;
+  }
+  if(d.outputs&&d.outputs.length){
+    html+=`<div><div class="p-section-label">Outputs</div><div class="p-data-block"><div class="p-data-label">What goes out</div>`;
+    d.outputs.forEach(o=>html+=`<div class="p-data-row ok">${o}</div>`);
+    html+=`</div></div>`;
+  }
+  if(d.regs&&d.regs.length){
+    html+=`<div><div class="p-section-label">Regulations</div><div class="p-tags">`;
+    d.regs.forEach((r,i)=>html+=`<span class="p-tag ${d.regType[i]||'indigo'}">${r}</span>`);
+    html+=`</div></div>`;
+  }
+  if(d.note){
+    html+=`<div class="p-data-block" style="border-color:#1e3352;background:#0a111e">
+      <div class="p-data-label" style="color:#6a85a8">Regulatory note</div>
+      <div class="p-text" style="color:#6a85a8;font-size:11px">${d.note}</div></div>`;
+  }
+  document.getElementById('a-lv-body').innerHTML = html;
+}
+
+// Add card accent colours via JS (CSS ::before background)
+document.querySelectorAll('.lv-layer-body .lv-card').forEach(card => {
+  const col = card.style.getPropertyValue('--card-col');
+  if(col) {
+    const bar = document.createElement('div');
+    bar.style.cssText = `position:absolute;top:0;left:0;right:0;height:3px;background:${col};border-radius:10px 10px 0 0`;
+    card.prepend(bar);
+  }
+});
+
+
+
+// Expose wrappers globally
+window.aTab = function(t) { if(typeof switchTab==='function') switchTab(t); };
+window.aZoom = function(f) { if(typeof zoomBy==='function') zoomBy(f); };
+window.aFit = function() { if(typeof fitView==='function') fitView(); };
+window.aToggle = function(id) { if(typeof toggleLayer==='function') toggleLayer(id); };
+window.aLvSel = function(c,n,s) { if(typeof lvSelect==='function') lvSelect(c,n,s); };
+
+})();
+
+</script>
+
+</body></html>
